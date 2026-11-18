@@ -57,7 +57,7 @@ export function koreaCampus(h) {
   const glassy = (floors, wall = '#8ba7ad') => (b) => { const st = modern(wall, { win: WIN.CURTAIN, bay: 3 }); return [{ poly: b.p, h: tall(floors, st), style: st }]; };
 
   const landmarks = {
-    183044140: (b) => hall(b, { floors: 4, towerH: 29, towerW: 13 }),                 // 본관 (1934)
+    183044140: (b) => hall(b, { floors: 4, towerH: 29, towerW: 13, face: [0.72, 0.69] }),                 // 본관 (1934)
     435326228: (b) => hall(b, { floors: 4, towerH: 31, towerW: 10, face: [-1, 0] }),  // 대학원 도서관 일대 (옛 도서관)
     392749251: (b) => hall(b, { floors: 3, towerH: 24, towerW: 8, face: [1, 0], dormers: false }), // 인촌기념관
     469055517: (b) => hall(b, { floors: 7, dormers: false }),                         // 중앙도서관

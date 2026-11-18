@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=61';
-import { City } from './buildings.js?v=61';
-import { buildStructures } from './models.js?v=61';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=61';
-import { Particles, Debris } from './fx.js?v=61';
-import { Input } from './input.js?v=61';
-import { Sfx } from './audio.js?v=61';
-import { CAMPUSES, selectedCampusId, goToCampus } from './campuses.js?v=61';
+import { NIGHT } from './facade.js?v=62';
+import { City } from './buildings.js?v=62';
+import { buildStructures } from './models.js?v=62';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=62';
+import { Particles, Debris } from './fx.js?v=62';
+import { Input } from './input.js?v=62';
+import { Sfx } from './audio.js?v=62';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=62';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; };
@@ -33,30 +33,27 @@ const SKILL_ICON = { rocket: '🔥', ballistic: '🎯', bomber: '💣', cluster:
 const WEAPON_LABEL = { ballistic: '🎯 탄도미사일', bomber: '💣 폭격 로켓', cluster: '💥 집속탄', nuke: '☢️ 핵폭탄', airstrike: '🛰️ 공중 지원', blackhole: '⚫ 블랙홀 미사일', quake: '🌋 지진탄', laser: '🔴 레이저 미사일', hunter: '🧨 유도 폭격 로켓' };
 const KIND = { apartments: '아파트', house: '주택', school: '학교', college: '대학 건물', dormitory: '기숙사', commercial: '상가', retail: '상가', residential: '주거 건물' };
 
-const campusId = selectedCampusId();
-const campus = CAMPUSES[campusId];
+let campusId, campus;
 
-// school picker (title screen and settings); switching reloads so the old city's memory is freed
 function setupCampusUi() {
   document.title = `${campus.short} 부수기`;
   $('titleTag').textContent = campus.tag;
   $('titleName').textContent = campus.short;
-  for (const box of document.querySelectorAll('.campusPick')) {
-    for (const [id, c] of Object.entries(CAMPUSES)) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.textContent = c.short; b.title = c.full;
-      b.classList.toggle('on', id === campusId);
-      b.setAttribute('aria-pressed', id === campusId ? 'true' : 'false');
-      b.addEventListener('click', () => { if (id !== campusId) goToCampus(id); });
-      box.append(b);
-    }
+  for (const b of document.querySelectorAll('.pickBtn')) b.addEventListener('click', openPicker);
+}
+
+function enterFullscreen() {
+  const de = document.documentElement;
+  if (de.requestFullscreen && matchMedia('(pointer: coarse)').matches) {
+    de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
   }
 }
 
-async function main() {
+// opts (coming from the picker): auto = start flying as soon as the campus is built
+async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (await fetch(`${campus.data}?v=61`)).json();
+  const data = await (opts.data || fetch(`${campus.data}?v=62`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -107,7 +104,7 @@ async function main() {
   const smoke = new Particles(scene, Q.smoke, false);
   const debris = new Debris(scene, Q.debris, terrain);
   const input = new Input();
-  const sfx = new Sfx();
+  const sfx = opts.sfx || new Sfx();
 
   // ------------------------------------------------------------ launch pad at the main gate
   const pad = new THREE.Vector3(campus.pad[0], 0, campus.pad[1]);
@@ -1597,20 +1594,35 @@ async function main() {
   const start = $('start');
   start.disabled = false;
   start.textContent = '🚀 출격';
-  start.addEventListener('click', () => {
+  const begin = () => {
     sfx.init();
-    const de = document.documentElement;
-    if (de.requestFullscreen && matchMedia('(pointer: coarse)').matches) {
-      de.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
-    }
+    if (opts.auto) $('title').style.transition = 'none'; // straight from the loading screen into the game
     $('title').classList.add('hide');
     document.body.classList.add('playing');
     if (innerWidth < innerHeight) { wasPortrait = true; showPortraitHint(); }
     resetRocket();
-  });
+  };
+  start.addEventListener('click', () => { enterFullscreen(); begin(); });
+  if (opts.auto) begin();
 }
 
-main().catch((e) => {
+async function boot() {
+  if (new URLSearchParams(location.search).has('pick')) {
+    document.body.classList.add('autoStart');
+    const { runPicker } = await import('./picker.js?v=62');
+    const { id, data, sfx } = await runPicker({ enterFullscreen });
+    campusId = id; campus = CAMPUSES[id];
+    rememberCampus(id);
+    await main({ auto: true, data, sfx });
+  } else {
+    campusId = selectedCampusId(); campus = CAMPUSES[campusId];
+    await main();
+  }
+}
+
+boot().catch((e) => {
   console.error(e);
   showError('불러오기 실패: ' + e.message);
+  const m = document.getElementById('pickMsg');
+  if (m) m.textContent = '불러오지 못했어요. 새로고침해 주세요.';
 });
