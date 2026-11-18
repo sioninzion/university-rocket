@@ -25,6 +25,11 @@ export const CAMPUSES = {
     data: 'data/korea.json', pad: [-24, -16], launchTarget: [-159, -140],
     outerChunkScale: 2, liteOuter: true, treeClear: [[-24, -16, 20]],
   },
+  yonsei: {
+    short: '연세대', full: '연세대학교 신촌캠퍼스', tag: 'YONSEI SINCHON CAMPUS', style: 'yonsei',
+    data: 'data/yonsei.json', pad: [14, -42], launchTarget: [183, -667],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[14, -42, 20]],
+  },
 };
 
 const KEY = 'univ-campus';

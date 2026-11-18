@@ -1,13 +1,8 @@
 // 고려대학교 서울캠퍼스: collegiate-Gothic granite halls around 중앙광장 (인문계), modern blocks
 // on the 자연계 side. Landmarks keyed by OSM id; `fallback` styles every other campus building.
-export function koreaCampus(h) {
-  const { WIN, obb, circle, frame, rectL, centroid, area, facingEdge } = h;
-
-  const SLATE = '#464c53', GRANITE = '#aca698', TRIM = '#c5c0b3';
-  const stone = (o = {}) => ({ wall: GRANITE, trim: TRIM, roof: SLATE, win: WIN.RUBBLE, bay: 3.2, floorH: 3.9, groundH: 4.5,
-    cornice: { h: 0.5, d: 0.3 }, plinth: { h: 1.1, d: 0.2, col: '#8e897d' }, ...o });
-  const modern = (wall, o = {}) => ({ wall, trim: '#ecebe6', roof: '#7c8287', win: WIN.GRID, bay: 3.2, floorH: 3.8, groundH: 4.6,
-    cornice: { h: 0.5, d: 0.3 }, parapet: 1.0, plinth: { h: 0.9, d: 0.2, col: '#a3a19a' }, ...o });
+// Collegiate-Gothic stone halls, shared by campuses built in that style
+export function collegiate(h, { stone, roof, merlon: merlonCol, trim }) {
+  const { WIN, obb, frame, rectL, facingEdge } = h;
   const tall = (floors, st) => st.groundH + (Math.max(floors, 1) - 1) * st.floorH;
   const onEdge = (e) => (t, d) => [e.a[0] + e.ux * t + e.nx * d, e.a[1] + e.uz * t + e.nz * d];
 
@@ -16,7 +11,7 @@ export function koreaCampus(h) {
     const base = specs.length;
     specs.push({ poly: [P(t0, d0), P(t1, d0), P(t1, d1), P(t0, d1)], h: H, style: { ...st, win: WIN.RUBBLE, bay: 2.8, cornice: { h: 0.6, d: 0.35 } } });
     const merlon = (t, d) => specs.push({ poly: [P(t - 0.55, d - 0.3), P(t + 0.55, d - 0.3), P(t + 0.55, d + 0.3), P(t - 0.55, d + 0.3)],
-      minY: H, h: 1.3, supports: [base], supportSpan: 40, style: { wall: GRANITE, trim: TRIM, win: WIN.NONE } });
+      minY: H, h: 1.3, supports: [base], supportSpan: 40, style: { wall: merlonCol, trim, win: WIN.NONE } });
     for (let t = t0 + 0.8; t <= t1 - 0.5; t += 2.2) { merlon(t, d0 - 0.3); merlon(t, d1 + 0.3); }
     return base;
   }
@@ -25,10 +20,10 @@ export function koreaCampus(h) {
   function hall(b, { floors = 4, face = [0, 1], towerH = 0, towerW = 13, dormers = true, st = stone() }) {
     const o = obb(b.p), L = frame(o), wall = tall(floors, st), specs = [];
     const inset = Math.min(o.hl * 0.2, 9);
-    specs.push({ poly: rectL(L, -o.hl + inset, o.hl - inset, -o.hw * 0.86, o.hw * 0.86), h: wall, style: st, roof: { type: 'gable', h: Math.min(o.hw * 0.62, 6), axis: [o.ux, o.uz], color: SLATE } });
+    specs.push({ poly: rectL(L, -o.hl + inset, o.hl - inset, -o.hw * 0.86, o.hw * 0.86), h: wall, style: st, roof: { type: 'gable', h: Math.min(o.hw * 0.62, 6), axis: [o.ux, o.uz], color: roof } });
     for (const s of [-1, 1]) {
       const a = s * (o.hl - inset), c = s * o.hl;
-      specs.push({ poly: rectL(L, Math.min(a, c), Math.max(a, c), -o.hw, o.hw), h: wall, style: st, roof: { type: 'gable', h: Math.min(inset * 0.7, 6.5), axis: [o.vx, o.vz], color: SLATE } });
+      specs.push({ poly: rectL(L, Math.min(a, c), Math.max(a, c), -o.hw, o.hw), h: wall, style: st, roof: { type: 'gable', h: Math.min(inset * 0.7, 6.5), axis: [o.vx, o.vz], color: roof } });
     }
     const e = facingEdge(rectL(L, -o.hl, o.hl, -o.hw * 0.86, o.hw * 0.86), face[0], face[1]);
     if (e) {
@@ -38,11 +33,26 @@ export function koreaCampus(h) {
         const t = m + s * (towerW / 2 + 5 + k * 6.5);
         if (t < inset + 2 || t > e.L - inset - 2) continue;
         specs.push({ poly: [P(t - 1.3, -0.4), P(t + 1.3, -0.4), P(t + 1.3, -2.8), P(t - 1.3, -2.8)], minY: wall, h: 1.8,
-          style: { ...st, plinth: null, cornice: null, win: WIN.NONE }, roof: { type: 'gable', h: 1.1, axis: [e.nx, e.nz], color: SLATE } });
+          style: { ...st, plinth: null, cornice: null, win: WIN.NONE }, roof: { type: 'gable', h: 1.1, axis: [e.nx, e.nz], color: roof } });
       }
     }
     return specs;
   }
+
+  return { hall, tower };
+}
+
+export function koreaCampus(h) {
+  const { WIN, obb, frame, rectL, centroid, area } = h;
+
+  const SLATE = '#464c53', GRANITE = '#aca698', TRIM = '#c5c0b3';
+  const stone = (o = {}) => ({ wall: GRANITE, trim: TRIM, roof: SLATE, win: WIN.RUBBLE, bay: 3.2, floorH: 3.9, groundH: 4.5,
+    cornice: { h: 0.5, d: 0.3 }, plinth: { h: 1.1, d: 0.2, col: '#8e897d' }, ...o });
+  const modern = (wall, o = {}) => ({ wall, trim: '#ecebe6', roof: '#7c8287', win: WIN.GRID, bay: 3.2, floorH: 3.8, groundH: 4.6,
+    cornice: { h: 0.5, d: 0.3 }, parapet: 1.0, plinth: { h: 0.9, d: 0.2, col: '#a3a19a' }, ...o });
+  const tall = (floors, st) => st.groundH + (Math.max(floors, 1) - 1) * st.floorH;
+
+  const { hall } = collegiate(h, { stone, roof: SLATE, merlon: GRANITE, trim: TRIM });
 
   const glassy = (floors, wall = '#8ba7ad') => (b) => { const st = modern(wall, { win: WIN.CURTAIN, bay: 3 }); return [{ poly: b.p, h: tall(floors, st), style: st }]; };
 

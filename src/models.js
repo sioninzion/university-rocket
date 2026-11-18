@@ -6,6 +6,7 @@ import { obb, area, makeRng, pip } from './buildings.js?v=61';
 import { cauLandmarks } from './models-cau.js?v=61';
 import { skkuLandmarks } from './models-skku.js?v=61';
 import { koreaCampus } from './models-korea.js?v=61';
+import { yonseiCampus } from './models-yonsei.js?v=61';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);
@@ -306,7 +307,7 @@ const HELPERS = { WIN, obb, area, circle, frame, rectL, centroid, clipHalf, faci
 Object.assign(LANDMARKS, cauLandmarks(HELPERS), skkuLandmarks(HELPERS));
 // campuses with their own look for buildings that have no hand-made model
 const FALLBACKS = {};
-for (const [id, make] of Object.entries({ korea: koreaCampus })) {
+for (const [id, make] of Object.entries({ korea: koreaCampus, yonsei: yonseiCampus })) {
   const c = make(HELPERS);
   Object.assign(LANDMARKS, c.landmarks);
   FALLBACKS[id] = c.fallback;
