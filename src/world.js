@@ -1,6 +1,6 @@
 // Terrain, ground map texture, surrounding hills, trees and sky.
 import * as THREE from 'three';
-import { pip, makeRng } from './buildings.js?v=58';
+import { pip, makeRng } from './buildings.js?v=59';
 
 export class Terrain {
   constructor(t) {
@@ -162,7 +162,7 @@ export function buildOuterGround(terrain, stride = 1) {
   return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
 }
 
-export function buildTrees(data, terrain, city, MAX = 9000) {
+export function buildTrees(data, terrain, city, MAX = 9000, clear = []) {
   const rnd = makeRng(42);
   const spots = [];
   const areas = data.areas.slice().sort((a, b) => (a.k === 'wood' ? 0 : 1) - (b.k === 'wood' ? 0 : 1));
@@ -174,6 +174,7 @@ export function buildTrees(data, terrain, city, MAX = 9000) {
     const n = Math.min(6000, Math.floor((maxx - minx) * (maxz - minz) * dens));
     for (let i = 0; i < n && spots.length < MAX; i++) {
       const x = minx + rnd() * (maxx - minx), z = minz + rnd() * (maxz - minz);
+      if (clear.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r)) continue;
       if (!terrain.inside(x, z, 2) || !pip(a.p, x, z) || city.occupied(x, z) || city.occupied(x + 3, z) || city.occupied(x - 3, z) || city.occupied(x, z + 3) || city.occupied(x, z - 3)) continue;
       spots.push([x, z, a.k === 'wood']);
     }

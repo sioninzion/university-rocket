@@ -1,21 +1,42 @@
 #!/usr/bin/env python3
-"""Bake OpenStreetMap + terrain tiles for Kyung Hee Univ. Global Campus into data/campus.json.
+"""Bake OpenStreetMap + terrain tiles for one campus into a data file.
 
-Usage: python3 tools/build_data.py <osm_all.json> <dem_dir> <out.json>
+Usage: python3 tools/build_data.py <campus> <osm_all.json> <dem_dir> <out.json>
+  e.g. python3 tools/build_data.py cau osm_all.json dem data/cau.json
 
 Inputs:
+  campus       : a key of CAMPUSES below
   osm_all.json : Overpass `out geom` result (buildings, highways, landuse ... in bbox)
   dem_dir      : Terrarium PNG tiles named 14_<x>_<y>.png (AWS open terrain tiles)
 """
 import json, math, os, struct, sys, zlib, glob, hashlib
 
-OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
+# origin = the main gate; bbox = (s, w, n, e); outline = OSM element of the campus boundary.
+# extra = buildings missing from OSM, traced from aerial imagery, in local metres.
+CAMPUSES = {
+    "khu": {  # 경희대학교 국제캠퍼스
+        "origin": (37.24733, 127.07841), "bbox": (37.2345, 127.0738, 37.2515, 127.0898),
+        "outline": ("relation", 11246784), "extra": [],
+    },
+    "cau": {  # 중앙대학교 서울캠퍼스
+        "origin": (37.50667, 126.95813), "bbox": (37.4985, 126.9470, 37.5110, 126.9650),
+        "outline": ("way", 284355223),
+        "names": {367405910: "체육관"},
+        "extra": [
+            {"id": 9100000001, "n": "정문 조형물", "k": "yes", "lv": 1, "h": 9.0, "p": [[-4, -2], [4, -2], [4, 2], [-4, 2]]},
+            {"id": 9100000002, "n": "청룡상", "k": "yes", "lv": 1, "h": 6.0,
+             "p": [[-69.5, 114.7], [-71.0, 117.3], [-74.0, 117.3], [-75.5, 114.7], [-74.0, 112.1], [-71.0, 112.1]]},
+            {"id": 9100000003, "n": "의혈탑", "k": "yes", "lv": 1, "h": 12.0, "p": [[-50, 160], [-45, 160], [-45, 165], [-50, 165]]},
+        ],
+    },
+}
 
-# Origin: the main gate (경희대학교 국제캠퍼스 정문)
-LAT0, LON0 = 37.24733, 127.07841
+CAMPUS_ID, OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+CFG = CAMPUSES[CAMPUS_ID]
+LAT0, LON0 = CFG["origin"]
 KX = math.cos(math.radians(LAT0)) * 111320.0
 KZ = 110574.0
-BBOX = (37.2345, 127.0738, 37.2515, 127.0898)  # s, w, n, e
+BBOX = CFG["bbox"]  # s, w, n, e
 
 
 def proj(lat, lon):
@@ -148,6 +169,12 @@ def outer_rings(e):
     return rings
 
 
+def inner_rings(e):
+    if e["type"] != "relation":
+        return []
+    return [ring(m["geometry"]) for m in e.get("members", []) if m.get("role") == "inner" and m.get("geometry")]
+
+
 def hash01(s):
     return int(hashlib.md5(s.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
 
@@ -171,7 +198,7 @@ for e in osm:
                 continue
             if a < 0:  # make counter-clockwise in (x,z) -> consistent winding
                 r = r[::-1]
-            name = t.get("name", "")
+            name = t.get("name") or CFG.get("names", {}).get(e["id"], "")
             kind = t["building"]
             if "height" in t:
                 try: h = float(t["height"].replace("m", ""))
@@ -194,8 +221,12 @@ for e in osm:
                 h = lv * 3.6 + 1.0
             hs = [hgt(x, z) for x, z in r]
             cx = sum(p[0] for p in r) / len(r); cz = sum(p[1] for p in r) / len(r)
-            buildings.append({"id": e["id"], "n": name, "k": kind, "lv": max(1, lv), "h": round(h, 1),
-                              "b": round(min(hs + [hgt(cx, cz)]), 2), "p": r})
+            rec = {"id": e["id"], "n": name, "k": kind, "lv": max(1, lv), "h": round(h, 1),
+                   "b": round(min(hs + [hgt(cx, cz)]), 2), "p": r}
+            holes = inner_rings(e)
+            if holes:
+                rec["in"] = holes  # courtyards, for hand-made models
+            buildings.append(rec)
     elif e["type"] == "way" and "highway" in t and e.get("geometry"):
         w = ROAD_W.get(t["highway"])
         if not w:
@@ -215,6 +246,13 @@ for e in osm:
         for r in outer_rings(e):
             if len(r) >= 3:
                 areas.append({"k": m, "p": r})
+
+
+for x in CFG["extra"]:
+    r = [list(p) for p in x["p"]]
+    if area(r) < 0:
+        r = r[::-1]
+    buildings.append({"id": x["id"], "n": x["n"], "k": x["k"], "lv": x["lv"], "h": x["h"], "b": 0, "p": r})
 
 
 # ---------------------------------------------------------------- terrain shaping
@@ -365,7 +403,7 @@ terrain_b64 = base64.b64encode(array.array("h", [max(-32768, min(32767, int(roun
 
 campus = []
 for e in osm:
-    if e["type"] == "relation" and e["id"] == 11246784:
+    if (e["type"], e["id"]) == CFG["outline"]:
         campus = outer_rings(e)
 
 # sort areas: large first so small (pitch, parking) draw on top

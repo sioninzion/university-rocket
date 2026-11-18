@@ -1,11 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=58';
-import { City } from './buildings.js?v=58';
-import { buildStructures } from './models.js?v=58';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=58';
-import { Particles, Debris } from './fx.js?v=58';
-import { Input } from './input.js?v=58';
-import { Sfx } from './audio.js?v=58';
+import { NIGHT } from './facade.js?v=59';
+import { City } from './buildings.js?v=59';
+import { buildStructures } from './models.js?v=59';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=59';
+import { Particles, Debris } from './fx.js?v=59';
+import { Input } from './input.js?v=59';
+import { Sfx } from './audio.js?v=59';
+import { CAMPUSES, selectedCampusId, goToCampus } from './campuses.js?v=59';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; };
@@ -32,9 +33,30 @@ const SKILL_ICON = { rocket: '🔥', ballistic: '🎯', bomber: '💣', cluster:
 const WEAPON_LABEL = { ballistic: '🎯 탄도미사일', bomber: '💣 폭격 로켓', cluster: '💥 집속탄', nuke: '☢️ 핵폭탄', airstrike: '🛰️ 공중 지원', blackhole: '⚫ 블랙홀 미사일', quake: '🌋 지진탄', laser: '🔴 레이저 미사일', hunter: '🧨 유도 폭격 로켓' };
 const KIND = { apartments: '아파트', house: '주택', school: '학교', college: '대학 건물', dormitory: '기숙사', commercial: '상가', retail: '상가', residential: '주거 건물' };
 
+const campusId = selectedCampusId();
+const campus = CAMPUSES[campusId];
+
+// school picker (title screen and settings); switching reloads so the old city's memory is freed
+function setupCampusUi() {
+  document.title = `${campus.short} 부수기`;
+  $('titleTag').textContent = campus.tag;
+  $('titleName').textContent = campus.short;
+  for (const box of document.querySelectorAll('.campusPick')) {
+    for (const [id, c] of Object.entries(CAMPUSES)) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = c.short; b.title = c.full;
+      b.classList.toggle('on', id === campusId);
+      b.setAttribute('aria-pressed', id === campusId ? 'true' : 'false');
+      b.addEventListener('click', () => { if (id !== campusId) goToCampus(id); });
+      box.append(b);
+    }
+  }
+}
+
 async function main() {
+  setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (await fetch('data/campus.json?v=58')).json();
+  const data = await (await fetch(`${campus.data}?v=59`)).json();
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -77,9 +99,9 @@ async function main() {
   scene.add(buildOuterGround(terrain, Q.terrainStride));
 
   setLoad('건물 조각내는 중…'); await frame();
-  const city = new City(buildStructures(data), scene);
+  const city = new City(buildStructures(data, campus), scene);
   setLoad('나무 심는 중…'); await frame();
-  for (const m of buildTrees(data, terrain, city, Q.trees)) scene.add(m);
+  for (const m of buildTrees(data, terrain, city, Q.trees, campus.treeClear)) scene.add(m);
 
   const fire = new Particles(scene, Q.fire, true);
   const smoke = new Particles(scene, Q.smoke, false);
@@ -88,10 +110,10 @@ async function main() {
   const sfx = new Sfx();
 
   // ------------------------------------------------------------ launch pad at the main gate
-  const pad = new THREE.Vector3(0, 0, 30);
+  const pad = new THREE.Vector3(campus.pad[0], 0, campus.pad[1]);
   for (let i = 0; i < 40 && city.occupied(pad.x, pad.z); i++) pad.z += 3;
   pad.y = terrain.height(pad.x, pad.z);
-  const target = new THREE.Vector2(104, 716); // toward 중앙도서관
+  const target = new THREE.Vector2(campus.launchTarget[0], campus.launchTarget[1]);
   const startYaw = Math.atan2(target.x - pad.x, -(target.y - pad.z));
   const padGroup = new THREE.Group();
   const concrete = new THREE.MeshLambertMaterial({ color: 0x9a9894 });

@@ -1,8 +1,9 @@
 // Building models. Campus landmarks are modelled by hand from photo references
 // (shape, storeys, colonnades, towers, roofs, materials); everything else gets a
 // style from its OSM type (Korean apartment blocks, houses, schools, shops...).
-import { WIN } from './facade.js?v=58';
-import { obb, area, makeRng, pip } from './buildings.js?v=58';
+import { WIN } from './facade.js?v=59';
+import { obb, area, makeRng, pip } from './buildings.js?v=59';
+import { cauLandmarks } from './models-cau.js?v=59';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);
@@ -299,6 +300,8 @@ const LANDMARKS = {
   455728923: (b) => [{ poly: b.p, h: 15, style: { wall: '#c4c1ba', trim: '#d7d4cd', roof: ROOF_GRAY, win: WIN.RIBBON, bay: 6, floorH: 7, groundH: 7, parapet: 1 } }], // 원자로센터
 };
 
+Object.assign(LANDMARKS, cauLandmarks({ WIN, obb, circle, frame, rectL, centroid, facingEdge, facingSpan, modernWhite, classical }));
+
 function dorm(b, floors) {
   const st = modernWhite({ wall: '#e7e6e1', floorH: 3.1, groundH: 4.2, bay: 2.9, win: WIN.GRID, cornice: { h: 0.6, d: 0.4 }, parapet: 1.2 });
   const o = obb(b.p);
@@ -354,7 +357,8 @@ function generic(b, rnd, inCampus) {
     bay: 3.0, floorH: fl, groundH: fl, parapet: 0.9, minWinEdge: 2.2, cornice: { h: 0.3, d: 0.3 } } }];
 }
 
-export function buildStructures(data) {
+// outerChunkScale > 1 fractures off-campus buildings into bigger pieces (dense neighbourhoods stay light on phones)
+export function buildStructures(data, { outerChunkScale = 1 } = {}) {
   const out = [];
   for (const b of data.buildings) {
     const rnd = makeRng(b.id % 2147483647 || 1);
@@ -364,7 +368,7 @@ export function buildStructures(data) {
     let specs;
     try { specs = fn ? fn(b, rnd) : generic(b, rnd, inCampus); } catch (e) { console.warn('model failed', b.id, e); specs = null; }
     if (!specs || !specs.length) specs = generic(b, rnd, inCampus);
-    out.push({ id: b.id, name: b.n, kind: b.k, base: b.b, inCampus, landmark: !!fn, specs });
+    out.push({ id: b.id, name: b.n, kind: b.k, base: b.b, inCampus, landmark: !!fn, specs, chunkScale: inCampus || fn ? 1 : outerChunkScale });
   }
   return out;
 }

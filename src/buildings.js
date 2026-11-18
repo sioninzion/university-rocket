@@ -7,7 +7,7 @@
 // Ornaments (cornices, parapets, plinths, pilasters, capitals) belong to the
 // chunk they sit on and disappear with it.
 import * as THREE from 'three';
-import { makeFacadeMaterial, WIN } from './facade.js?v=58';
+import { makeFacadeMaterial, WIN } from './facade.js?v=59';
 
 const EPS = 1e-3;
 
@@ -234,7 +234,7 @@ export class Building {
 
   fracture(r) {
     const ar = Math.abs(area(this.pts));
-    const cs = ar < 40 ? 2 : ar < 150 ? 3 : ar < 700 ? 4 : 5;
+    const cs = (ar < 40 ? 2 : ar < 150 ? 3 : ar < 700 ? 4 : 5) * (this.owner.chunkScale || 1);
     this.cs = cs;
     this.gx0 = this.minx - r() * cs; this.gz0 = this.minz - r() * cs;
     const nx = Math.ceil((this.maxx - this.gx0) / cs) + 1, nz = Math.ceil((this.maxz - this.gz0) / cs) + 1;

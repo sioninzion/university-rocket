@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 export const WIN = {
   NONE: 0, CLASSIC: 1, GRID: 2, RIBBON: 3, CURTAIN: 4, APART: 5, BRICK: 6, ARCH: 7,
-  GOTHIC: 8, INTERIOR: 9, ARCADE: 10, SHOP: 11, GREENHOUSE: 12, BRICKPLAIN: 13,
+  GOTHIC: 8, INTERIOR: 9, ARCADE: 10, SHOP: 11, GREENHOUSE: 12, BRICKPLAIN: 13, RUBBLE: 14,
 };
 
 const GLSL = /* glsl */`
@@ -26,6 +26,19 @@ float brickMortar(vec2 uv) {
   float by = fract(uv.y / 0.075);
   float m = max(1.0 - smoothstep(0.0, 0.06, bx) + smoothstep(0.94, 1.0, bx), 1.0 - smoothstep(0.0, 0.14, by));
   return clamp(m, 0.0, 1.0);
+}
+
+// random-coursed rubble masonry: x = distance to the mortar joint, y = per-stone random
+vec2 rubbleStone(vec2 p) {
+  vec2 g = floor(p), f = fract(p), id = g;
+  float F1 = 8.0, F2 = 8.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 b = vec2(float(i), float(j));
+    vec2 r = b + vec2(fHash(g + b), fHash(g + b + 17.3)) - f;
+    float d = dot(r, r);
+    if (d < F1) { F2 = F1; F1 = d; id = g + b; } else if (d < F2) F2 = d;
+  }
+  return vec2(sqrt(F2) - sqrt(F1), fHash(id + 3.7));
 }
 
 void facadeShade(inout vec3 col) {
@@ -60,6 +73,12 @@ void facadeShade(inout vec3 col) {
     if (st == 13) return;
   }
 
+  if (st == 14) {
+    vec2 s = rubbleStone(vec2(u, v * 1.25) / 0.62);
+    vec3 b = mix(col * (0.84 + 0.3 * s.y), vec3(0.80, 0.78, 0.73), (1.0 - smoothstep(0.03, 0.09, s.x)) * 0.8);
+    col = mix(b, col, lod);
+  }
+
   float ww = 0.6, y0 = 0.22, y1 = 0.82;
   if (st == 1) { ww = 0.42; y0 = 0.24; y1 = 0.80; }
   else if (st == 2) { ww = 0.68; y0 = 0.22; y1 = 0.84; }
@@ -72,6 +91,7 @@ void facadeShade(inout vec3 col) {
   else if (st == 10) { ww = 0.64; y0 = -0.01; y1 = 0.86; }
   else if (st == 11) { ww = 0.86; y0 = 0.10; y1 = 0.92; }
   else if (st == 12) { ww = 1.02; y0 = -0.02; y1 = 1.02; }
+  else if (st == 14) { ww = 0.52; y0 = 0.22; y1 = 0.80; }
   if (fl == 0.0 && (st == 1 || st == 2 || st == 7)) { y1 = 0.88; }
   float hw = ww * bw * 0.5, wy0 = y0 * flH, wy1 = y1 * flH;
 
@@ -93,6 +113,7 @@ void facadeShade(inout vec3 col) {
   if (st == 4 || st == 2 || st == 3) glass = vec3(0.17, 0.25, 0.33);
   if (st == 10) glass = vec3(0.07, 0.06, 0.06);
   if (st == 12) glass = vec3(0.62, 0.74, 0.74);
+  if (st == 14) glass = vec3(0.07, 0.08, 0.09);
   float r = fHash(vec2(bay, fl));
   // at night roughly 45% of rooms have their lights on (warm, a few cool-white)
   float on = step(0.55, fHash(vec2(bay * 1.37 + 3.1, fl * 2.11 + 7.7)));
@@ -102,7 +123,7 @@ void facadeShade(inout vec3 col) {
   if (st != 10 && r > 0.82) glass = mix(glass, vec3(0.80, 0.78, 0.70), 0.35); // drawn blinds
 
   // mullions / transoms
-  if (st == 2 || st == 3 || st == 4 || st == 11 || st == 12) {
+  if (st == 2 || st == 3 || st == 4 || st == 11 || st == 12 || st == 14) {
     float mx = abs(fract(u / 1.25) - 0.5) * 1.25;
     float mull = 1.0 - smoothstep(0.035 - aaU, 0.035 + aaU, mx);
     float my = st == 4 ? abs(py - flH * 0.5) : 99.0;
@@ -145,6 +166,6 @@ export function makeFacadeMaterial(opts = {}) {
       .replace('#include <color_fragment>', '#include <color_fragment>\nfacadeShade(diffuseColor.rgb);')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += facGlass * vec3(0.10, 0.13, 0.17) + facLit * uNight * mix(vec3(1.0, 0.72, 0.38), vec3(0.85, 0.9, 1.0), step(0.8, fHash(vec2(vFuv.x, vFuv.y * 0.1)))) * 1.1;');
   };
-  m.customProgramCacheKey = () => 'facade-v2';
+  m.customProgramCacheKey = () => 'facade-v3';
   return m;
 }
