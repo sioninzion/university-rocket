@@ -1,21 +1,12 @@
 // 성균관대학교 인문사회과학캠퍼스 landmarks, keyed by OSM id: the Joseon-era 성균관 and 문묘
 // halls plus the modern campus climbing the hill behind them.
-export function skkuLandmarks(h) {
-  const { WIN, obb, circle, frame, rectL, centroid, clipHalf, facingEdge, facingSpan, colonnade, modernWhite } = h;
+const TILE = '#3b3f43', RED = '#a8352a', EAVE = '#2f7d6d', PLASTER = '#ded8c9', BASE = '#a9a598';
 
-  const TILE = '#3b3f43', RED = '#a8352a', JADE = '#3d9b90', EAVE = '#2f7d6d', PLASTER = '#ded8c9', BASE = '#a9a598';
-  const PALE = '#dad6cc', STONE = '#c9c6bd', TAN = '#b9a58a', BRICK = '#9c4f3d', GLASS = '#86a9ad';
-
-  const office = (wall, o = {}) => modernWhite({
-    wall, trim: '#ecebe6', floorH: 3.8, groundH: 4.6, bay: 3.2, win: WIN.GRID,
-    cornice: { h: 0.5, d: 0.3 }, parapet: 1.0, plinth: { h: 1.0, d: 0.2, col: '#a3a19a' }, ...o,
-  });
-  const tall = (floors, st) => st.groundH + (floors - 1) * st.floorH;
-  const block = (floors, wall, o) => (b) => { const st = office(wall, o); return [{ poly: b.p, h: tall(floors, st), style: st }]; };
-  const onEdge = (e) => (t, d) => [e.a[0] + e.ux * t + e.nx * d, e.a[1] + e.uz * t + e.nz * d];
-
+// shared with other campuses that have traditional halls
+export function hanokBuilder(h) {
+  const { WIN, obb, frame, rectL } = h;
   // hanok hall: stone platform, red posts between infill panels, green eaves, dark tiled hip roof
-  const hanok = ({ wallH = 4.4, roofH, panel = PLASTER, bay = 3.3, platform = 0.9 } = {}) => (b) => {
+  return ({ wallH = 4.4, roofH, panel = PLASTER, bay = 3.3, platform = 0.9 } = {}) => (b) => {
     const o = obb(b.p), L = frame(o);
     const body = { wall: panel, trim: RED, roof: TILE, win: WIN.NONE, bay, floorH: wallH, groundH: wallH,
       pilaster: { every: 1, w: 0.42, d: 0.16, from: platform }, bands: [{ y: wallH - 0.55, h: 0.55, d: 0.1 }] };
@@ -27,6 +18,23 @@ export function skkuLandmarks(h) {
         style: { wall: EAVE, trim: EAVE, roof: TILE, win: WIN.NONE }, roof: { type: 'hip', h: roofH ?? Math.min(o.hw * 0.75, 4.6), color: TILE } },
     ];
   };
+}
+
+export function skkuLandmarks(h) {
+  const { WIN, obb, circle, frame, rectL, centroid, clipHalf, facingEdge, facingSpan, colonnade, modernWhite } = h;
+
+  const JADE = '#3d9b90';
+  const PALE = '#dad6cc', STONE = '#c9c6bd', TAN = '#b9a58a', BRICK = '#9c4f3d', GLASS = '#86a9ad';
+
+  const office = (wall, o = {}) => modernWhite({
+    wall, trim: '#ecebe6', floorH: 3.8, groundH: 4.6, bay: 3.2, win: WIN.GRID,
+    cornice: { h: 0.5, d: 0.3 }, parapet: 1.0, plinth: { h: 1.0, d: 0.2, col: '#a3a19a' }, ...o,
+  });
+  const tall = (floors, st) => st.groundH + (floors - 1) * st.floorH;
+  const block = (floors, wall, o) => (b) => { const st = office(wall, o); return [{ poly: b.p, h: tall(floors, st), style: st }]; };
+  const onEdge = (e) => (t, d) => [e.a[0] + e.ux * t + e.nx * d, e.a[1] + e.uz * t + e.nz * d];
+
+  const hanok = hanokBuilder(h);
 
   return {
     415700719: hanok({ wallH: 5.2, panel: JADE, roofH: 4.6 }),                 // 명륜당

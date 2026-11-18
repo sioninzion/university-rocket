@@ -2,12 +2,12 @@
 // order. Swipe to browse; choosing one fires a rocket at it, then the screen fades to black and
 // the game starts. It runs in its own light scene, torn down before the campus itself is built.
 import * as THREE from 'three';
-import { City, makeRng } from './buildings.js?v=63';
-import { buildStructures } from './models.js?v=63';
-import { buildSky } from './world.js?v=63';
-import { Particles, Debris } from './fx.js?v=63';
-import { Sfx } from './audio.js?v=63';
-import { CAMPUSES, selectedCampusId } from './campuses.js?v=63';
+import { City, makeRng } from './buildings.js?v=64';
+import { buildStructures } from './models.js?v=64';
+import { buildSky } from './world.js?v=64';
+import { Particles, Debris } from './fx.js?v=64';
+import { Sfx } from './audio.js?v=64';
+import { CAMPUSES, selectedCampusId } from './campuses.js?v=64';
 
 const SPACING = 320, FLIGHT = 1.05;
 const FADE_DELAY = 0.9, FADE_TIME = 0.5; // seconds after the blast
@@ -39,7 +39,7 @@ export async function runPicker({ enterFullscreen }) {
   const entries = Object.entries(CAMPUSES).sort((a, b) => a[1].short.localeCompare(b[1].short, 'ko'));
   const box = $('picker'), msg = $('pickMsg'), btn = $('pickGo'), black = $('fadeBlack');
   box.classList.add('open');
-  const heroes = await (await fetch('data/heroes.json?v=63')).json();
+  const heroes = await (await fetch('data/heroes.json?v=64')).json();
   await new Promise((r) => { requestAnimationFrame(r); setTimeout(r, 60); });
 
   // ------------------------------------------------------------ scene
@@ -60,8 +60,8 @@ export async function runPicker({ enterFullscreen }) {
   Object.assign(sun.shadow.camera, { left: -130, right: 130, top: 130, bottom: -130, near: 10, far: 700 });
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.5;
   scene.add(sun, sun.target);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 3000), new THREE.MeshLambertMaterial({ color: 0x6f8c52 }));
-  ground.rotation.x = -Math.PI / 2; ground.position.x = SPACING * 2.5; ground.receiveShadow = true; scene.add(ground);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(SPACING * entries.length + 6000, 3000), new THREE.MeshLambertMaterial({ color: 0x6f8c52 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.x = SPACING * (entries.length - 1) / 2; ground.receiveShadow = true; scene.add(ground);
 
   const list = entries.map(([id, c], i) => {
     const outer = new THREE.Group(), inner = new THREE.Group();
@@ -145,7 +145,7 @@ export async function runPicker({ enterFullscreen }) {
     box.classList.add('firing');
     sfx.init(); sfx.engine(true, true);
     enterFullscreen();
-    dataP = fetch(`${hero.c.data}?v=63`).then(r => r.json()); // start downloading the campus during the show
+    dataP = fetch(`${hero.c.data}?v=64`).then(r => r.json()); // start downloading the campus during the show
     dataP.catch(() => {});
     const stub = { height: () => hero.base };
     fx = { fire: new Particles(hero.inner, 900, true), smoke: new Particles(hero.inner, 900, false), debris: new Debris(hero.inner, 700, stub), flash: new THREE.PointLight(0xffa955, 0, 240, 1.2) };
