@@ -30,6 +30,11 @@ export const CAMPUSES = {
     data: 'data/yonsei.json', pad: [14, -42], launchTarget: [183, -667],
     outerChunkScale: 2.2, liteOuter: true, treeClear: [[14, -42, 20]],
   },
+  snu: {
+    short: '서울대', full: '서울대학교 관악캠퍼스', tag: 'SEOUL NATIONAL UNIVERSITY', style: 'snu',
+    data: 'data/snu.json', pad: [40, 14], launchTarget: [293, 757],
+    outerChunkScale: 1.6, liteOuter: true, treeClear: [[40, 14, 22]],
+  },
 };
 
 const KEY = 'univ-campus';
