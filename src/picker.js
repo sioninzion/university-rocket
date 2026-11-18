@@ -1,15 +1,16 @@
 // University picker: each campus's best-known building seen from above at an angle, in 가나다
-// order. Swipe to browse; choosing one fires a rocket at it, and 0.6 s after the blast the game
-// starts. It runs in its own light scene, torn down before the campus itself is built.
+// order. Swipe to browse; choosing one fires a rocket at it, then the screen fades to black and
+// the game starts. It runs in its own light scene, torn down before the campus itself is built.
 import * as THREE from 'three';
-import { City, makeRng } from './buildings.js?v=62';
-import { buildStructures } from './models.js?v=62';
-import { buildSky } from './world.js?v=62';
-import { Particles, Debris } from './fx.js?v=62';
-import { Sfx } from './audio.js?v=62';
-import { CAMPUSES, selectedCampusId } from './campuses.js?v=62';
+import { City, makeRng } from './buildings.js?v=63';
+import { buildStructures } from './models.js?v=63';
+import { buildSky } from './world.js?v=63';
+import { Particles, Debris } from './fx.js?v=63';
+import { Sfx } from './audio.js?v=63';
+import { CAMPUSES, selectedCampusId } from './campuses.js?v=63';
 
-const SPACING = 320, AFTER_BLAST = 0.6, FLIGHT = 1.05;
+const SPACING = 320, FLIGHT = 1.05;
+const FADE_DELAY = 0.9, FADE_TIME = 0.5; // seconds after the blast
 const FOV = 38, ELEVATION = 0.5, AZIMUTH = 0.62;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const $ = (id) => document.getElementById(id);
@@ -36,9 +37,9 @@ function addTrees(scene, list) {
 
 export async function runPicker({ enterFullscreen }) {
   const entries = Object.entries(CAMPUSES).sort((a, b) => a[1].short.localeCompare(b[1].short, 'ko'));
-  const box = $('picker'), msg = $('pickMsg'), btn = $('pickGo');
+  const box = $('picker'), msg = $('pickMsg'), btn = $('pickGo'), black = $('fadeBlack');
   box.classList.add('open');
-  const heroes = await (await fetch('data/heroes.json?v=62')).json();
+  const heroes = await (await fetch('data/heroes.json?v=63')).json();
   await new Promise((r) => { requestAnimationFrame(r); setTimeout(r, 60); });
 
   // ------------------------------------------------------------ scene
@@ -144,7 +145,7 @@ export async function runPicker({ enterFullscreen }) {
     box.classList.add('firing');
     sfx.init(); sfx.engine(true, true);
     enterFullscreen();
-    dataP = fetch(`${hero.c.data}?v=62`).then(r => r.json()); // start downloading the campus during the show
+    dataP = fetch(`${hero.c.data}?v=63`).then(r => r.json()); // start downloading the campus during the show
     dataP.catch(() => {});
     const stub = { height: () => hero.base };
     fx = { fire: new Particles(hero.inner, 900, true), smoke: new Particles(hero.inner, 900, false), debris: new Debris(hero.inner, 700, stub), flash: new THREE.PointLight(0xffa955, 0, 240, 1.2) };
@@ -154,6 +155,7 @@ export async function runPicker({ enterFullscreen }) {
     p1.set(hero.x + d * 0.42, Math.max(hero.H * 1.7, 52), d * 0.28);
     p2.set(hero.x, Math.min(hero.H * 0.55, 34), 0);
     rocket.position.copy(p0); rocket.visible = true;
+    black.classList.add('on');
   }
   btn.addEventListener('click', choose);
 
@@ -229,7 +231,8 @@ export async function runPicker({ enterFullscreen }) {
       if (u >= 1) { S.killed = blast(); S.phase = 'boom'; S.t = 0; }
     } else if (S.phase === 'boom') {
       S.t += dt;
-      if (S.t >= AFTER_BLAST) { S.phase = 'done'; done(); }
+      black.style.opacity = clamp((S.t - FADE_DELAY) / FADE_TIME, 0, 1);
+      if (S.t >= FADE_DELAY + FADE_TIME) { S.phase = 'done'; done(); }
     }
     if (fx) { fx.fire.update(dt); fx.smoke.update(dt); fx.debris.update(dt); fx.flash.intensity *= Math.exp(-dt * 6); }
     renderer.render(scene, camera);

@@ -1,15 +1,16 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=62';
-import { City } from './buildings.js?v=62';
-import { buildStructures } from './models.js?v=62';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=62';
-import { Particles, Debris } from './fx.js?v=62';
-import { Input } from './input.js?v=62';
-import { Sfx } from './audio.js?v=62';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=62';
+import { NIGHT } from './facade.js?v=63';
+import { City } from './buildings.js?v=63';
+import { buildStructures } from './models.js?v=63';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=63';
+import { Particles, Debris } from './fx.js?v=63';
+import { Input } from './input.js?v=63';
+import { Sfx } from './audio.js?v=63';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=63';
 
 const $ = (id) => document.getElementById(id);
-const setLoad = (t) => { $('loadMsg').textContent = t; };
+const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
+const BLACK_HOLD = 300; // ms of black screen between the picker and the game
 // yield so the loading text can paint (setTimeout also covers background tabs)
 const frame = () => new Promise((r) => { requestAnimationFrame(() => r()); setTimeout(r, 60); });
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -53,7 +54,7 @@ function enterFullscreen() {
 async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=62`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=63`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -1596,24 +1597,36 @@ async function main(opts = {}) {
   start.textContent = '🚀 출격';
   const begin = () => {
     sfx.init();
-    if (opts.auto) $('title').style.transition = 'none'; // straight from the loading screen into the game
     $('title').classList.add('hide');
     document.body.classList.add('playing');
     if (innerWidth < innerHeight) { wasPortrait = true; showPortraitHint(); }
     resetRocket();
   };
   start.addEventListener('click', () => { enterFullscreen(); begin(); });
-  if (opts.auto) begin();
+  if (opts.auto) {
+    begin();
+    await frame(); // the first game frame is drawn behind the black screen
+    await new Promise((r) => setTimeout(r, Math.max(0, opts.blackSince + BLACK_HOLD - performance.now())));
+    clearBlack();
+  }
+}
+
+function clearBlack() {
+  $('fadeBlack').classList.remove('on');
+  $('fadeBlack').style.opacity = 0;
+  $('fadeMsg').classList.remove('show');
 }
 
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=62');
+    const { runPicker } = await import('./picker.js?v=63');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
+    const blackSince = performance.now();
+    setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
     campusId = id; campus = CAMPUSES[id];
     rememberCampus(id);
-    await main({ auto: true, data, sfx });
+    await main({ auto: true, data, sfx, blackSince });
   } else {
     campusId = selectedCampusId(); campus = CAMPUSES[campusId];
     await main();
@@ -1622,6 +1635,8 @@ async function boot() {
 
 boot().catch((e) => {
   console.error(e);
+  document.body.classList.remove('autoStart');
+  clearBlack();
   showError('불러오기 실패: ' + e.message);
   const m = document.getElementById('pickMsg');
   if (m) m.textContent = '불러오지 못했어요. 새로고침해 주세요.';
