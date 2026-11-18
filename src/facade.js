@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 export const WIN = {
   NONE: 0, CLASSIC: 1, GRID: 2, RIBBON: 3, CURTAIN: 4, APART: 5, BRICK: 6, ARCH: 7,
-  GOTHIC: 8, INTERIOR: 9, ARCADE: 10, SHOP: 11, GREENHOUSE: 12, BRICKPLAIN: 13, RUBBLE: 14,
+  GOTHIC: 8, INTERIOR: 9, ARCADE: 10, SHOP: 11, GREENHOUSE: 12, BRICKPLAIN: 13, RUBBLE: 14, RUBBLEPLAIN: 15,
 };
 
 const GLSL = /* glsl */`
@@ -73,10 +73,11 @@ void facadeShade(inout vec3 col) {
     if (st == 13) return;
   }
 
-  if (st == 14) {
+  if (st == 14 || st == 15) {
     vec2 s = rubbleStone(vec2(u, v * 1.25) / 0.62);
     vec3 b = mix(col * (0.84 + 0.3 * s.y), vec3(0.80, 0.78, 0.73), (1.0 - smoothstep(0.03, 0.09, s.x)) * 0.8);
     col = mix(b, col, lod);
+    if (st == 15) return;
   }
 
   float ww = 0.6, y0 = 0.22, y1 = 0.82;
@@ -166,6 +167,6 @@ export function makeFacadeMaterial(opts = {}) {
       .replace('#include <color_fragment>', '#include <color_fragment>\nfacadeShade(diffuseColor.rgb);')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += facGlass * vec3(0.10, 0.13, 0.17) + facLit * uNight * mix(vec3(1.0, 0.72, 0.38), vec3(0.85, 0.9, 1.0), step(0.8, fHash(vec2(vFuv.x, vFuv.y * 0.1)))) * 1.1;');
   };
-  m.customProgramCacheKey = () => 'facade-v3';
+  m.customProgramCacheKey = () => 'facade-v4';
   return m;
 }

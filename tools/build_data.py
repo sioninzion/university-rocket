@@ -29,6 +29,23 @@ CAMPUSES = {
             {"id": 9100000003, "n": "의혈탑", "k": "yes", "lv": 1, "h": 12.0, "p": [[-50, 160], [-45, 160], [-45, 165], [-50, 165]]},
         ],
     },
+    "skku": {  # 성균관대학교 인문사회과학캠퍼스 (서울)
+        "origin": (37.58470, 126.99680), "bbox": (37.5818, 126.9855, 37.5932, 127.0025),
+        "outline": ("way", 75546222),
+        "extra": [
+            {"id": 9200000001, "n": "정문", "k": "yes", "lv": 1, "h": 6.0, "p": [[-9, -18.5], [-7, -18.5], [-7, -16.5], [-9, -16.5]]},
+            {"id": 9200000002, "n": "명륜당 은행나무", "k": "yes", "lv": 1, "h": 20.0,
+             "p": [[-90.0, -130.0], [-86.0, -130.0], [-86.0, -126.0], [-90.0, -126.0]]},
+        ],
+        "areas": [
+            {"k": "grass", "flat": True, "p": [[-346.3, -405.1], [-293.4, -355.8], [-326.4, -341.3], [-367.5, -388.7]]},  # 금잔디광장
+            {"k": "pitch", "p": [[-501.8, -321.0], [-420.4, -341.3], [-404.5, -284.8], [-490.6, -265.0]]},                 # 대운동장
+        ],
+        # 명륜동 houses are mostly missing from OSM: fill the blocks with small generated ones
+        "infill": {"step": 18.0, "region": [(37.5932, 126.9935), (37.5902, 126.9919), (37.5885, 126.9928), (37.5869, 126.9935),
+                                            (37.5850, 126.99475), (37.5838, 126.9955), (37.5818, 126.9962),
+                                            (37.5818, 127.0025), (37.5932, 127.0025)]},
+    },
 }
 
 CAMPUS_ID, OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
@@ -313,6 +330,74 @@ def bbox(pts):
     return min(xs), min(zs), max(xs), max(zs)
 
 
+for a in CFG.get("areas", []):
+    r = [list(p) for p in a["p"]]
+    areas.append({**a, "p": r if area(r) > 0 else r[::-1]})
+
+
+def add_infill(cfg):
+    """Small generated houses on city blocks OSM leaves empty (deterministic)."""
+    region = [list(proj(la, lo)) for la, lo in cfg["region"]]
+    outline = [r for e in osm if (e["type"], e["id"]) == CFG["outline"] for r in outer_rings(e)]
+    blocked = [a["p"] for a in areas if a["k"] in ("wood", "water", "pitch", "track", "parking")] + outline
+    BIN = 30.0
+    road_bins, bld_bins = {}, {}
+    for r in roads:
+        for a, b in zip(r["p"], r["p"][1:]):
+            n = max(1, int(math.hypot(b[0] - a[0], b[1] - a[1]) / 12))
+            for k in range(n + 1):
+                x, z = a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n
+                road_bins.setdefault((int(x // BIN), int(z // BIN)), []).append((a, b, r["w"], r["t"]))
+    def add_bld(p):
+        x0b, z0b, x1b, z1b = bbox(p)
+        for i in range(int(x0b // BIN), int(x1b // BIN) + 1):
+            for j in range(int(z0b // BIN), int(z1b // BIN) + 1):
+                bld_bins.setdefault((i, j), []).append(p)
+    for b in buildings:
+        add_bld(b["p"])
+    def near(bins, x, z):
+        cx, cz = int(x // BIN), int(z // BIN)
+        return [v for i in range(cx - 1, cx + 2) for j in range(cz - 1, cz + 2) for v in bins.get((i, j), [])]
+    x0r, z0r, x1r, z1r = bbox(region)
+    step, count, row = cfg["step"], 0, 0
+    z = max(z0r, z_min + 12)
+    while z < min(z1r, z_min + (nz - 1) * STEP - 12):
+        x = max(x0r, x_min + 12) + (row % 2) * step / 2
+        while x < min(x1r, x_min + (nx - 1) * STEP - 12):
+            key = f"{x:.1f},{z:.1f}"
+            px = x + (hash01(key + "x") - 0.5) * 5; pz = z + (hash01(key + "z") - 0.5) * 5
+            x += step
+            if not pip(region, px, pz) or any(pip(q, px, pz) for q in blocked):
+                continue
+            best, ux, uz, ok = 1e9, 1.0, 0.0, True
+            for a, b, w, t in near(road_bins, px, pz):
+                d = seg_dist(px, pz, a[0], a[1], b[0], b[1])[0]
+                if d < w / 2 + 5.5:
+                    ok = False; break
+                if d < best and t not in ("footway", "path", "steps", "cycleway"):
+                    L = math.hypot(b[0] - a[0], b[1] - a[1]) or 1
+                    best, ux, uz = d, (b[0] - a[0]) / L, (b[1] - a[1]) / L
+            if not ok or best > 45:
+                continue
+            hw = 4 + hash01(key + "w") * 2.2; hd = 4.2 + hash01(key + "d") * 2.2
+            p = [[round(px + sx * hw * ux - sz * hd * uz, 1), round(pz + sx * hw * uz + sz * hd * ux, 1)]
+                 for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            if any(any(pip(o, c[0], c[1]) for c in p + [[px, pz]]) or any(pip(p, q[0], q[1]) for q in o)
+                   for o in near(bld_bins, px, pz)):
+                continue
+            if area(p) < 0:
+                p = p[::-1]
+            lv = 2 + int(hash01(key + "l") * 3)
+            buildings.append({"id": 9300000000 + count, "n": "", "k": "house" if hash01(key + "k") < 0.4 else "yes",
+                              "lv": lv, "h": round(lv * 2.9 + 0.6, 1), "b": 0, "p": p})
+            add_bld(p); count += 1
+        z += step * 0.86; row += 1
+    print("infill houses", count)
+
+
+if CFG.get("infill"):
+    add_infill(CFG["infill"])
+
 # 1. natural micro relief on wooded / grassy hills (deterministic value noise)
 def vnoise(x, z):
     def h(i, j):
@@ -367,7 +452,7 @@ for r in roads:
 
 # 3. flat areas: pitches, tracks, parking
 for a in areas:
-    if a["k"] not in ("pitch", "track", "parking"):
+    if a["k"] not in ("pitch", "track", "parking") and not a.get("flat"):
         continue
     pts = a["p"]
     x0b, z0b, x1b, z1b = bbox(pts)

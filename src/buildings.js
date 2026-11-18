@@ -7,7 +7,7 @@
 // Ornaments (cornices, parapets, plinths, pilasters, capitals) belong to the
 // chunk they sit on and disappear with it.
 import * as THREE from 'three';
-import { makeFacadeMaterial, WIN } from './facade.js?v=59';
+import { makeFacadeMaterial, WIN } from './facade.js?v=60';
 
 const EPS = 1e-3;
 
@@ -561,15 +561,23 @@ export class Building {
 
   buildIntact(gb) {
     const start = gb.count;
-    if (!this.roof.max) {
+    if (!this.roof.max || this.owner.lite) {
       // flat roof: one quad per wall and one roof polygon (much lighter than per chunk)
+      // lite buildings get the same walls and a simple pitched fan until they are damaged
       const B = this.base;
       for (const e of this.edges) {
         gb.quad([e.ax, this.ybot, e.az], [e.bx, this.ybot, e.bz], [e.bx, this.ytop, e.bz], [e.ax, this.ytop, e.az], [e.uz, 0, -e.ux], this.color, this.facFor(e),
           [[0, this.ybot - B], [e.len, this.ybot - B], [e.len, this.ytop - B], [0, this.ytop - B]]);
       }
       const whole = { pts: this.pts, tris: null };
-      this.cap(gb, whole, () => this.ytop, true, this.roofCol);
+      if (this.roof.max) {
+        const n = this.pts.length, Z = [0, 0];
+        const cx = this.pts.reduce((s, p) => s + p[0], 0) / n, cz = this.pts.reduce((s, p) => s + p[1], 0) / n, peak = [cx, this.topAt(cx, cz), cz];
+        for (let i = 0; i < n; i++) {
+          const a = this.pts[i], b = this.pts[(i + 1) % n];
+          gb.tri([a[0], this.ytop, a[1]], [b[0], this.ytop, b[1]], peak, [0, 1, 0], this.roofCol, PLAIN, Z, Z, Z);
+        }
+      } else this.cap(gb, whole, () => this.ytop, true, this.roofCol);
       if (this.floating) this.cap(gb, whole, () => this.ybot, false, this.trim);
       this.ornamentsWhole(gb);
       this.range = [start, gb.count - start];
