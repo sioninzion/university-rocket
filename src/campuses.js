@@ -3,6 +3,7 @@
 //   launchTarget : point [x, z] the rocket faces on the pad
 //   outerChunkScale : bigger fracture pieces for off-campus buildings (optional)
 //   liteOuter    : simplified off-campus buildings for very dense neighbourhoods (optional)
+//   style        : campus look for buildings without a hand-made model (see models.js)
 //   treeClear    : [[x, z, radius]] kept free of trees (optional)
 export const CAMPUSES = {
   khu: {
@@ -18,6 +19,11 @@ export const CAMPUSES = {
     short: '성균관대', full: '성균관대학교 인문사회과학캠퍼스', tag: 'SUNGKYUNKWAN SEOUL CAMPUS',
     data: 'data/skku.json', pad: [-24, -1], launchTarget: [-195, -307],
     outerChunkScale: 1.6, liteOuter: true, treeClear: [[-24, -1, 22]],
+  },
+  korea: {
+    short: '고려대', full: '고려대학교 서울캠퍼스', tag: 'KOREA UNIVERSITY SEOUL', style: 'korea',
+    data: 'data/korea.json', pad: [-24, -16], launchTarget: [-159, -140],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[-24, -16, 20]],
   },
 };
 

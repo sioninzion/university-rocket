@@ -46,6 +46,10 @@ CAMPUSES = {
                                             (37.5850, 126.99475), (37.5838, 126.9955), (37.5818, 126.9962),
                                             (37.5818, 127.0025), (37.5932, 127.0025)]},
     },
+    "korea": {  # 고려대학교 서울캠퍼스
+        "origin": (37.58823, 127.03414), "bbox": (37.5815, 127.0205, 37.5955, 127.0395),
+        "outline": ("way", 26253960), "extra": [], "infill": {"step": 25.0},
+    },
 }
 
 CAMPUS_ID, OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
@@ -133,7 +137,7 @@ BASE_ELEV = elev(LAT0, LON0)
 # terrain grid in local metres
 x_min, z_max = proj(BBOX[0], BBOX[1])
 x_max, z_min = proj(BBOX[2], BBOX[3])
-STEP = 4.0
+STEP = float(CFG.get("step", 4.0))
 nx = int((x_max - x_min) / STEP) + 1
 nz = int((z_max - z_min) / STEP) + 1
 heights = []
@@ -337,7 +341,8 @@ for a in CFG.get("areas", []):
 
 def add_infill(cfg):
     """Small generated houses on city blocks OSM leaves empty (deterministic)."""
-    region = [list(proj(la, lo)) for la, lo in cfg["region"]]
+    s, w, n, e = BBOX
+    region = [list(proj(la, lo)) for la, lo in cfg.get("region", [(s, w), (s, e), (n, e), (n, w)])]
     outline = [r for e in osm if (e["type"], e["id"]) == CFG["outline"] for r in outer_rings(e)]
     blocked = [a["p"] for a in areas if a["k"] in ("wood", "water", "pitch", "track", "parking")] + outline
     BIN = 30.0

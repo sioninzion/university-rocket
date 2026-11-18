@@ -1,10 +1,11 @@
 // Building models. Campus landmarks are modelled by hand from photo references
 // (shape, storeys, colonnades, towers, roofs, materials); everything else gets a
 // style from its OSM type (Korean apartment blocks, houses, schools, shops...).
-import { WIN } from './facade.js?v=60';
-import { obb, area, makeRng, pip } from './buildings.js?v=60';
-import { cauLandmarks } from './models-cau.js?v=60';
-import { skkuLandmarks } from './models-skku.js?v=60';
+import { WIN } from './facade.js?v=61';
+import { obb, area, makeRng, pip } from './buildings.js?v=61';
+import { cauLandmarks } from './models-cau.js?v=61';
+import { skkuLandmarks } from './models-skku.js?v=61';
+import { koreaCampus } from './models-korea.js?v=61';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);
@@ -301,8 +302,15 @@ const LANDMARKS = {
   455728923: (b) => [{ poly: b.p, h: 15, style: { wall: '#c4c1ba', trim: '#d7d4cd', roof: ROOF_GRAY, win: WIN.RIBBON, bay: 6, floorH: 7, groundH: 7, parapet: 1 } }], // 원자로센터
 };
 
-const HELPERS = { WIN, obb, circle, frame, rectL, centroid, clipHalf, facingEdge, facingSpan, colonnade, modernWhite, classical };
+const HELPERS = { WIN, obb, area, circle, frame, rectL, centroid, clipHalf, facingEdge, facingSpan, colonnade, modernWhite, classical };
 Object.assign(LANDMARKS, cauLandmarks(HELPERS), skkuLandmarks(HELPERS));
+// campuses with their own look for buildings that have no hand-made model
+const FALLBACKS = {};
+for (const [id, make] of Object.entries({ korea: koreaCampus })) {
+  const c = make(HELPERS);
+  Object.assign(LANDMARKS, c.landmarks);
+  FALLBACKS[id] = c.fallback;
+}
 
 function dorm(b, floors) {
   const st = modernWhite({ wall: '#e7e6e1', floorH: 3.1, groundH: 4.2, bay: 2.9, win: WIN.GRID, cornice: { h: 0.6, d: 0.4 }, parapet: 1.2 });
@@ -361,7 +369,8 @@ function generic(b, rnd, inCampus) {
 
 // outerChunkScale > 1 fractures off-campus buildings into bigger pieces (dense neighbourhoods stay light on phones)
 // liteOuter drops off-campus ornaments and draws their roofs simply, for neighbourhoods with thousands of houses
-export function buildStructures(data, { outerChunkScale = 1, liteOuter = false } = {}) {
+export function buildStructures(data, { outerChunkScale = 1, liteOuter = false, style = null } = {}) {
+  const campusFallback = FALLBACKS[style];
   const out = [];
   for (const b of data.buildings) {
     const rnd = makeRng(b.id % 2147483647 || 1);
@@ -369,7 +378,7 @@ export function buildStructures(data, { outerChunkScale = 1, liteOuter = false }
     const inCampus = data.campus.some(poly => pip(poly, cx, cz));
     const fn = LANDMARKS[b.id];
     let specs;
-    try { specs = fn ? fn(b, rnd) : generic(b, rnd, inCampus); } catch (e) { console.warn('model failed', b.id, e); specs = null; }
+    try { specs = fn ? fn(b, rnd) : inCampus && campusFallback ? campusFallback(b, rnd) : generic(b, rnd, inCampus); } catch (e) { console.warn('model failed', b.id, e); specs = null; }
     if (!specs || !specs.length) specs = generic(b, rnd, inCampus);
     const lite = liteOuter && !inCampus && !fn;
     if (lite) specs = specs.map(s => ({ ...s, style: { ...s.style, cornice: null, parapet: 0, plinth: null, bands: [], pilaster: null } }));
