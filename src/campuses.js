@@ -15,8 +15,8 @@ export const CAMPUSES = {
   cau: {
     short: '중앙대', full: '중앙대학교 서울캠퍼스', tag: 'CHUNG-ANG SEOUL CAMPUS',
     hero: { id: 278564996, name: '영신관', view: [0, -1] },
-    data: 'data/cau.json', pad: [-12, 34], launchTarget: [-16, 212],
-    outerChunkScale: 1.6, treeClear: [[-12, 34, 32]],
+    data: 'data/cau.json', pad: [30, -2], launchTarget: [-16, 212],
+    outerChunkScale: 1.6, treeClear: [[30, -2, 32]],
   },
   skku: {
     short: '성균관대', full: '성균관대학교 인문사회과학캠퍼스', tag: 'SUNGKYUNKWAN SEOUL CAMPUS',
@@ -27,8 +27,8 @@ export const CAMPUSES = {
   korea: {
     short: '고려대', full: '고려대학교 서울캠퍼스', tag: 'KOREA UNIVERSITY SEOUL', style: 'korea',
     hero: { id: 183044140, name: '본관', view: [0.74, 0.67] },
-    data: 'data/korea.json', pad: [-24, -16], launchTarget: [-159, -140],
-    outerChunkScale: 2, liteOuter: true, treeClear: [[-24, -16, 20]],
+    data: 'data/korea.json', pad: [-34, 18], launchTarget: [-159, -140],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[-34, 18, 20]],
   },
   yonsei: {
     short: '연세대', full: '연세대학교 신촌캠퍼스', tag: 'YONSEI SINCHON CAMPUS', style: 'yonsei',
@@ -57,8 +57,8 @@ export const CAMPUSES = {
   hufs: {
     short: '한국외대', full: '한국외국어대학교 서울캠퍼스', tag: 'HUFS SEOUL CAMPUS', style: 'hufs',
     hero: { id: 478064706, name: '본관', view: [0.92, 0.39] },
-    data: 'data/hufs.json', pad: [-35, -15], launchTarget: [-211, -90],
-    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-35, -15, 20]],
+    data: 'data/hufs.json', pad: [14, -50], launchTarget: [-211, -90],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[14, -50, 20]],
   },
   uos: {
     short: '서울시립대', full: '서울시립대학교', tag: 'UNIVERSITY OF SEOUL', style: 'uos',
@@ -69,20 +69,20 @@ export const CAMPUSES = {
   konkuk: {
     short: '건국대', full: '건국대학교 서울캠퍼스', tag: 'KONKUK SEOUL CAMPUS', style: 'konkuk',
     hero: { id: 367582526, name: '상허기념도서관', view: [0.93, 0.38] },
-    data: 'data/konkuk.json', pad: [-24, 29], launchTarget: [-253, 309],
-    outerChunkScale: 2.9, liteOuter: true, treeClear: [[-24, 29, 20]],
+    data: 'data/konkuk.json', pad: [22, 22], launchTarget: [-253, 309],
+    outerChunkScale: 2.9, liteOuter: true, treeClear: [[22, 22, 20]],
   },
   dongguk: {
     short: '동국대', full: '동국대학교 서울캠퍼스', tag: 'DONGGUK SEOUL CAMPUS', style: 'dongguk',
     hero: { id: 270032443, name: '본관', view: [0.94, 0.34] },
-    data: 'data/dongguk.json', pad: [-31, -22], launchTarget: [-295, -209],
-    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-31, -22, 20]],
+    data: 'data/dongguk.json', pad: [-62, -26], launchTarget: [-295, -209],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-62, -26, 20]],
   },
   hongik: {
     short: '홍익대', full: '홍익대학교 서울캠퍼스', tag: 'HONGIK SEOUL CAMPUS', style: 'hongik',
     hero: { id: 1441620363, name: '홍문관', view: [0.45, -0.89] },
-    data: 'data/hongik.json', pad: [-10, -21], launchTarget: [67, 42],
-    outerChunkScale: 2.4, liteOuter: true, treeClear: [[-10, -21, 20]],
+    data: 'data/hongik.json', pad: [86, 110], launchTarget: [67, 42],
+    outerChunkScale: 2.4, liteOuter: true, treeClear: [[86, 110, 20]],
   },
   kookmin: {
     short: '국민대', full: '국민대학교', tag: 'KOOKMIN UNIVERSITY', style: 'kookmin',
