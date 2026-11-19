@@ -1,16 +1,16 @@
 // Building models. Campus landmarks are modelled by hand from photo references
 // (shape, storeys, colonnades, towers, roofs, materials); everything else gets a
 // style from its OSM type (Korean apartment blocks, houses, schools, shops...).
-import { WIN } from './facade.js?v=93';
-import { obb, area, makeRng, pip } from './buildings.js?v=93';
-import { cauLandmarks } from './models-cau.js?v=93';
-import { skkuLandmarks } from './models-skku.js?v=93';
-import { koreaCampus } from './models-korea.js?v=93';
-import { yonseiCampus } from './models-yonsei.js?v=93';
-import { snuCampus } from './models-snu.js?v=93';
-import { seoulCampuses } from './models-seoul.js?v=93';
-import { kssdCampuses } from './models-kssd.js?v=93';
-import { branchCampuses } from './models-branch.js?v=93';
+import { WIN } from './facade.js?v=94';
+import { obb, area, makeRng, pip } from './buildings.js?v=94';
+import { cauLandmarks } from './models-cau.js?v=94';
+import { skkuLandmarks } from './models-skku.js?v=94';
+import { koreaCampus } from './models-korea.js?v=94';
+import { yonseiCampus } from './models-yonsei.js?v=94';
+import { snuCampus } from './models-snu.js?v=94';
+import { seoulCampuses } from './models-seoul.js?v=94';
+import { kssdCampuses } from './models-kssd.js?v=94';
+import { branchCampuses } from './models-branch.js?v=94';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);
@@ -168,8 +168,24 @@ const LANDMARKS = {
       bands: [{ y: 5.2, h: 0.5, d: 0.3 }, { y: 21.5, h: 0.4, d: 0.2 }], pilaster: { every: 2, w: 1.0, d: 0.35, from: 3.2, to: 21.5 } }) }];
     const e = facingSpan(b.p, 1, 0);
     if (e) {
-      specs.push({ poly: [[e.a[0], e.a[1]], [e.b[0], e.b[1]], [e.b[0] + e.nx * 9, e.b[1] + e.nz * 9], [e.a[0] + e.nx * 9, e.a[1] + e.nz * 9]], h: 3.2,
-        style: { wall: '#d9d4ca', trim: '#e6e2da', roof: '#cfcac0', win: WIN.NONE, cornice: { h: 0.4, d: 0.3 } } }); // podium terrace & steps
+      const P = (t, d) => [e.a[0] + e.ux * t + e.nx * d, e.a[1] + e.uz * t + e.nz * d];
+      const R = (t0, t1, d0, d1) => [P(t0, d0), P(t1, d0), P(t1, d1), P(t0, d1)];
+      const PODIUM = { wall: '#d9d4ca', trim: '#e6e2da', roof: '#cfcac0', win: WIN.NONE, cornice: { h: 0.4, d: 0.3 } };
+      specs.push({ poly: R(0, e.L, 0, 9), h: 3.2, style: PODIUM }); // podium terrace
+      // grand stairs down to the plaza: 8 steps of 0.4 m x 0.7 m, centred on the front
+      const sw = Math.min(42, e.L * 0.38), u0 = (e.L - sw) / 2, u1 = u0 + sw;
+      for (let i = 1; i <= 8; i++) specs.push({ poly: R(u0, u1, 9, 9 + (9 - i) * 0.7), h: i * 0.4, style: { wall: '#dcd7cc', trim: '#e6e2da', roof: '#d8d3c8', win: WIN.NONE } });
+      // stone cheek walls either side of the stairs, a low balustrade along the rest of the terrace edge
+      const CHEEK = { ...PODIUM, cornice: { h: 0.3, d: 0.15 } };
+      for (const [a0, a1] of [[u0 - 1.6, u0], [u1, u1 + 1.6]]) specs.push({ poly: R(a0, a1, 8.6, 15.2), h: 4.2, style: CHEEK });
+      for (const [a0, a1] of [[0.4, u0 - 1.6], [u1 + 1.6, e.L - 0.4]]) if (a1 - a0 > 1) specs.push({ poly: R(a0, a1, 8.5, 9), h: 4.2, style: CHEEK });
+      // four tall glass doors in stone frames, in the middle bays behind the columns
+      const n = Math.max(2, Math.floor((e.L - 8) / 6.2) + 1), mid = e.L / 2 + ((n % 2) ? 0 : 3.1);
+      for (const k of [-1.5, -0.5, 0.5, 1.5]) {
+        const c = mid + k * 6.2;
+        specs.push({ poly: R(c - 2.5, c + 2.5, -0.3, 0.5), h: 10.8, style: { wall: MARBLE, trim: TRIM, roof: ROOF_GRAY, win: WIN.NONE, cornice: { h: 0.6, d: 0.25 } } });
+        specs.push({ poly: R(c - 1.7, c + 1.7, -0.3, 0.65), h: 9.6, style: { wall: '#1f2a31', trim: '#8a7a5c', roof: ROOF_GRAY, win: WIN.NONE } });
+      }
       colonnade(specs, e, { offset: 4.8, spacing: 6.2, r: 0.95, h: 23.6, pad: 4, entab: 2.6 });
     }
     return specs;
