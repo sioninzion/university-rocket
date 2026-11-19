@@ -1,6 +1,7 @@
 // Seven Seoul campuses built from one kit: each gets its own palette for ordinary buildings
 // and hand-made models for the landmarks that define it.
-import { hanokBuilder } from './models-skku.js?v=64';
+import { hanokBuilder } from './models-skku.js?v=65';
+import { collegiate } from './models-korea.js?v=65';
 
 function kit(h) {
   const { WIN, obb, frame, rectL, centroid, area, clipHalf, facingEdge } = h;
@@ -42,7 +43,7 @@ function kit(h) {
     return [{ poly: b.p, h: tall(floors, st), style: st }];
   };
   const pair = (b, st, H = 7) => { const o = obb(b.p), L = frame(o), w = Math.max(o.hl, 3.4); return [{ poly: rectL(L, -w, -w + 1.6, -1, 1), h: H, style: st }, { poly: rectL(L, w - 1.6, w, -1, 1), h: H, style: st }]; };
-  return { WIN, obb, frame, rectL, office, brick, glass, tall, block, inset, archBlock, entranceHall, fallback, pair };
+  return { WIN, obb, frame, rectL, clipHalf, facingEdge, onEdge, office, brick, glass, tall, block, inset, archBlock, entranceHall, fallback, pair };
 }
 
 export const seoulCampuses = {
@@ -101,7 +102,19 @@ export const seoulCampuses = {
   konkuk(h) {
     const k = kit(h), { WIN, office, brick, glass, block } = k, hanok = hanokBuilder(h), PALE = '#dcd8cd';
     return { landmarks: {
-      367582526: (b) => k.entranceHall(b, { floors: 6, st: office('#cfc7b7', { floorH: 4, pilaster: { every: 2, w: 0.8, d: 0.4, from: 1 } }), entry: glass(), face: [0.95, -0.3], extra: 1, width: 22 }), // 상허기념도서관
+      // 상허기념도서관: stone box under a deep flat canopy, white slit-window panel over broad steps
+      367582526(b) {
+        const stone = office('#b9b1a1', { win: WIN.NONE, cornice: null, parapet: 0, plinth: { h: 1, d: 0.25, col: '#9f9788' } });
+        const specs = [{ poly: b.p, h: 23, style: stone }, { poly: k.inset(b.p, 1.09), minY: 23, h: 1.6, style: { wall: '#d6d1c6', trim: '#e2ded4', roof: '#bdb9af', win: WIN.NONE } }];
+        const e = h.facingSpan(b.p, 0.93, 0.38); // the front looks across 일감호
+        if (e) {
+          const P = k.onEdge(e), m = e.L / 2, w = e.L * 0.36, q = (a, c, d0, d1) => [P(a, d0), P(c, d0), P(c, d1), P(a, d1)];
+          specs.push({ poly: q(m - w, m + w, 0.7, -0.2), minY: 7, h: 13, style: { wall: '#ece9e1', trim: '#f5f3ee', win: WIN.CLASSIC, bay: 1.35, floorH: 4.3, groundH: 4.3, cornice: { h: 0.4, d: 0.2 } } });
+          specs.push({ poly: q(m - w * 0.72, m + w * 0.72, 0.4, -0.2), minY: 1, h: 4.6, style: { wall: '#39444a', trim: '#4a555b', win: WIN.CURTAIN, bay: 2.6, floorH: 4.6 } });
+          for (let i = 0; i < 5; i++) specs.push({ poly: q(m - w * 1.25, m + w * 1.25, 3.2 * (5 - i) + 0.5, 0.4), h: 0.35 + i * 0.28, style: { wall: '#c8c4b9', trim: '#d6d2c8', roof: '#c9c5ba', win: WIN.NONE } });
+        }
+        return specs;
+      },
       367251119: block(5, office(PALE, { cornice: { h: 0.9, d: 0.6 } })),            // 행정관
       372481901: block(15, glass('#86a2ac', { floorH: 3.6 })),                        // 새천년관
       572774580: hanok({ wallH: 3.2, roofH: 3 }),                                     // 도정궁 경원당
@@ -110,20 +123,66 @@ export const seoulCampuses = {
   },
 
   dongguk(h) {
-    const k = kit(h), { WIN, office, brick, glass, block } = k, hanok = hanokBuilder(h), STONE = '#bab3a4';
+    const k = kit(h), { WIN, office, brick, glass, block } = k, hanok = hanokBuilder(h), SLATE = '#4a4d50';
+    const stone = (o = {}) => office('#a59f92', { win: WIN.RUBBLE, floorH: 4, groundH: 4.6, parapet: 0, cornice: { h: 0.45, d: 0.3 }, plinth: { h: 1.1, d: 0.2, col: '#837e73' }, ...o });
+    const { hall } = collegiate(h, { stone, roof: SLATE, merlon: '#a59f92', trim: '#c9c4b8' });
+    const PALE = { wall: '#e0d8c6', trim: '#eee8da', roof: '#cfc8b8', win: WIN.NONE, cornice: { h: 0.5, d: 0.25 } };
     return { landmarks: {
-      268231222: (b) => k.entranceHall(b, { floors: 3, st: office(STONE, { win: WIN.RUBBLE, floorH: 4, cornice: { h: 0.6, d: 0.4 } }), face: [0, -1], extra: 1.4, width: 15 }), // 명진관
-      270032443: block(4, office(STONE, { win: WIN.RUBBLE, floorH: 3.9 })),           // 본관
-      268779564: hanok({ wallH: 6, panel: '#3d9b90', roofH: 6, platform: 1.3 }),      // 정각원 (옛 숭정전)
+      // 본관: long stone hall with gabled ends; a tall pale portal shelters the white Buddha
+      270032443(b) {
+        const specs = hall(b, { floors: 3, face: [0.94, 0.34], dormers: false }), o = k.obb(b.p), L = k.frame(o);
+        const e = k.facingEdge(k.rectL(L, -o.hl, o.hl, -o.hw * 0.86, o.hw * 0.86), 0.94, 0.34);
+        if (e) {
+          const P = k.onEdge(e), m = e.L / 2, q = (a, c, d0, d1) => [P(m + a, d0), P(m + c, d0), P(m + c, d1), P(m + a, d1)], i = specs.length;
+          specs.push({ poly: q(-6.2, -3.4, 3.2, -2.2), h: 21, style: PALE }, { poly: q(3.4, 6.2, 3.2, -2.2), h: 21, style: PALE });
+          specs.push({ poly: q(-6.2, 6.2, 3.2, -2.2), minY: 18, h: 3.6, supports: [i, i + 1], supportSpan: 9, style: PALE });
+          specs.push({ poly: q(-3.4, 3.4, -0.6, -2.2), h: 18, style: { wall: '#65808a', trim: '#d9d6cc', win: WIN.CURTAIN, bay: 2.2, floorH: 3.6 } });
+          const [x, z] = P(m, 1.5), W = { wall: '#f1ecdf', trim: '#f8f4ea', win: WIN.NONE };
+          specs.push({ poly: h.circle(x, z, 1.5, 10), h: 1.1, style: { wall: '#8e897e', trim: '#a39e92', win: WIN.NONE } }, { poly: h.circle(x, z, 0.85, 10), minY: 1.1, h: 3.9, style: W }, { poly: h.circle(x, z, 0.5, 8), minY: 5, h: 1.1, style: W });
+        }
+        return specs;
+      },
+      // 명진관: rough-faced stone block with tall narrow windows
+      268231222: block(4, office('#b3a58d', { win: WIN.RUBBLE, bay: 2.6, floorH: 4.4, groundH: 5, cornice: { h: 0.7, d: 0.35 }, parapet: 0.8, plinth: { h: 2.2, d: 0.35, col: '#8d8270' } })),
+      268779564: hanok({ wallH: 6, panel: '#3d9b90', roofH: 6, platform: 2.4 }),      // 정각원 (옛 숭정전)
       272537475: hanok({ wallH: 3.2, panel: '#a8352a', roofH: 2.6 }),                 // 종각
+      9700000001(b) { // 정문: four pale stone piers under little tiled caps
+        const L = k.frame(k.obb(b.p)), st = { wall: '#c9c3b3', trim: '#d8d3c5', win: WIN.RUBBLEPLAIN, minWinEdge: 0, plinth: { h: 0.5, d: 0.12, col: '#a39d8e' } }, specs = [];
+        for (const s of [-11, -4.6, 4.6, 11]) {
+          const r = Math.abs(s) < 6 ? 1.3 : 1.1, i = specs.length;
+          specs.push({ poly: k.rectL(L, s - r, s + r, -r, r), h: 6.2, style: st });
+          specs.push({ poly: k.rectL(L, s - r - 0.45, s + r + 0.45, -r - 0.45, r + 0.45), minY: 6.2, h: 0.3, supports: [i], supportSpan: 4, style: { wall: SLATE, trim: SLATE, roof: SLATE, win: WIN.NONE }, roof: { type: 'hip', h: 1, color: SLATE } });
+        }
+        return specs;
+      },
+      9700000002(b) { // 코끼리상: a pair of bronze elephants
+        const L = k.frame(k.obb(b.p)), st = { wall: '#7b6a4e', trim: '#8a7858', win: WIN.NONE }, specs = [];
+        for (const c of [-3.4, 3.8]) {
+          const box = (u0, u1, v0, v1, y, H) => specs.push({ poly: k.rectL(L, c + u0, c + u1, v0, v1), ...(y ? { minY: y } : {}), h: H, style: st });
+          for (const [a, s] of [[-1.5, -0.75], [-1.5, 0.75], [1.1, -0.75], [1.1, 0.75]]) box(a - 0.33, a + 0.33, s - 0.33, s + 0.33, 0, 1.25);
+          box(-2, 1.6, -1.05, 1.05, 1.25, 1.75); box(1.5, 2.6, -0.75, 0.75, 1.65, 1.25); box(2.55, 2.95, -0.2, 0.2, 0.45, 1.5);
+        }
+        return specs;
+      },
     }, fallback: k.fallback([() => office('#d2cdc1'), () => brick('#a4604b'), () => office('#c5c3bb', { win: WIN.RIBBON }), () => glass()]) };
   },
 
   hongik(h) {
     const k = kit(h), { WIN, office, glass } = k, CONC = '#d3d0c8';
     return { landmarks: {
-      // 홍문관: a 16-storey triumphal arch that doubles as the main gate
-      1441620363: (b) => k.archBlock(b, { H: 62, gap: 11, spring: 25, st: office('#c9c8c2', { floorH: 3.8, cornice: { h: 1, d: 0.5 } }), lintel: glass('#8ba7b3', { floorH: 3.8 }) }),
+      // 홍문관: a green glass slab bridging the gateway, red-banded wing east, stone tower west
+      1441620363(b) {
+        const o = k.obb(b.p), L = k.frame(o), s = o.ux < 0 ? 1 : -1, W = (t) => L(s * t, 0), d = [s * o.ux, s * o.uz];
+        const east = k.clipHalf(b.p, W(-0.16 * o.hl), [-d[0], -d[1]]), west = k.clipHalf(b.p, W(0.64 * o.hl), d);
+        const bands = [0, 1, 2, 3, 4].map(i => ({ y: 4.4 + i * 3.7, h: 0.8, d: 0.12 }));
+        const green = glass('#6f9d90', { floorH: 3.6, groundH: 3.6, bay: 2.4, parapet: 0.6, plinth: null });
+        return [
+          { poly: east, h: 24, style: office('#e6dac5', { trim: '#b5553c', floorH: 3.7, groundH: 4.4, parapet: 0, cornice: null, bands }) },
+          { poly: west, h: 66, style: office('#d9ccb2', { win: WIN.NONE, cornice: { h: 0.8, d: 0.2 }, parapet: 0.6 }) },
+          { poly: b.p, minY: 24, h: 29, supports: [0, 1], supportSpan: o.hl * 2, style: green },
+          { poly: k.inset(b.p, 0.58), minY: 53, h: 9, style: { ...green, wall: '#86aeb0' } },
+        ];
+      },
     }, fallback: k.fallback([() => office(CONC), () => office('#dedbd3'), () => office('#c8c6be', { win: WIN.RIBBON }), () => office('#d5d2ca', { win: WIN.GRID, bay: 4 })]) };
   },
 };

@@ -42,15 +42,15 @@ python3 tools/serve.py 8792   # http://localhost:8792
 ```
 
 ## 데이터 다시 만들기
-`tools/build_data.py`가 Overpass API에서 받은 OSM 데이터와 AWS Terrain Tiles(Terrarium, z14)를 학교별 파일로 굽습니다.
+`tools/build_data.py`가 OSM 데이터와 Copernicus GLO-30 표고(건물·나무 높이를 걸러 낸 지면)를 학교별 파일로 굽습니다.
 
 ```bash
-python3 tools/build_data.py cau osm_all.json dem data/cau.json
+python3 tools/build_data.py cau osm_all.json dem_cache data/cau.json
 ```
 
 학교를 추가하려면 `tools/build_data.py`의 `CAMPUSES`와 `src/campuses.js`에 항목을 넣으면 됩니다.
 
 ## 출처
 - 지도 데이터 © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
-- 지형: Mapzen / AWS Terrain Tiles
+- 지형: Copernicus DEM GLO-30 (© DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA)
 - 3D 렌더링: [three.js](https://threejs.org)

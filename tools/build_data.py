@@ -7,9 +7,9 @@ Usage: python3 tools/build_data.py <campus> <osm_all.json> <dem_dir> <out.json>
 Inputs:
   campus       : a key of CAMPUSES below
   osm_all.json : Overpass `out geom` result (buildings, highways, landuse ... in bbox)
-  dem_dir      : Terrarium PNG tiles named 14_<x>_<y>.png (AWS open terrain tiles)
+  dem_dir      : cache folder for Copernicus GLO-30 tiles (downloaded on demand)
 """
-import json, math, os, struct, sys, zlib, glob, hashlib
+import array, json, math, os, struct, sys, urllib.request, zlib, hashlib
 
 # origin = the main gate; bbox = (s, w, n, e); outline = OSM element of the campus boundary.
 # extra = buildings missing from OSM, traced from aerial imagery, in local metres.
@@ -82,14 +82,15 @@ CAMPUSES = {
         "extra": [], "infill": {"step": 26.0},
     },
     "konkuk": {  # 건국대학교 서울캠퍼스
-        "origin": (37.5435, 127.0796), "bbox": (37.534, 127.069, 37.548, 127.089),
+        "origin": (37.54484, 127.0767), "bbox": (37.534, 127.069, 37.548, 127.089),
         "outline": ("way", 26281749),
         "extra": [], "infill": {"step": 26.0},
     },
     "dongguk": {  # 동국대학교 서울캠퍼스
-        "origin": (37.5585, 127.004), "bbox": (37.5515, 126.9915, 37.5645, 127.0085),
+        "origin": (37.55661, 127.00284), "bbox": (37.5515, 126.9915, 37.5645, 127.0085),
         "outline": ("way", 268230784),
-        "extra": [], "infill": {"step": 26.0},
+        "extra": [{"id": 9700000001, "n": "정문", "k": "yes", "lv": 1, "h": 6.4, "p": [[-2.0, 11.9], [-0.6, -12.1], [2.0, -11.9], [0.6, 12.1]]},
+                  {"id": 9700000002, "n": "코끼리상", "k": "yes", "lv": 1, "h": 4.0, "p": [[-16.3, -12.6], [-30.3, -13.4], [-30.0, -18.2], [-16.0, -17.4]]}], "infill": {"step": 26.0},
     },
     "hongik": {  # 홍익대학교 서울캠퍼스
         "origin": (37.55291, 126.92414), "bbox": (37.545, 126.917, 37.557, 126.933),
@@ -110,54 +111,116 @@ def proj(lat, lon):
     return ((lon - LON0) * KX, -(lat - LAT0) * KZ)
 
 
-# ---------------------------------------------------------------- PNG / DEM
-def read_png(path):
-    b = open(path, "rb").read()
-    assert b[:8] == b"\x89PNG\r\n\x1a\n"
-    i, idat, w = 8, b"", 0
-    while i < len(b):
-        ln, typ = struct.unpack(">I4s", b[i:i + 8])
-        data = b[i + 8:i + 8 + ln]
-        if typ == b"IHDR":
-            w, h, depth, ctype = struct.unpack(">IIBB", data[:10])
-            assert depth == 8 and ctype == 2
-        elif typ == b"IDAT":
-            idat += data
-        i += 12 + ln
-    raw = zlib.decompress(idat)
-    bpp, stride = 3, w * 3
-    out, prev, p = [], bytearray(stride), 0
-    for _ in range(h):
-        f = raw[p]; p += 1
-        row = bytearray(raw[p:p + stride]); p += stride
-        for x in range(stride):
-            a = row[x - bpp] if x >= bpp else 0
-            c = prev[x - bpp] if x >= bpp else 0
-            up = prev[x]
-            if f == 1: row[x] = (row[x] + a) & 255
-            elif f == 2: row[x] = (row[x] + up) & 255
-            elif f == 3: row[x] = (row[x] + ((a + up) >> 1)) & 255
-            elif f == 4:
-                pa, pb, pc = abs(up - c), abs(a - c), abs(a + up - 2 * c)
-                pr = a if (pa <= pb and pa <= pc) else (up if pb <= pc else c)
-                row[x] = (row[x] + pr) & 255
-        out.append(row); prev = row
-    return w, out
+# ---------------------------------------------------------------- DEM
+# Copernicus GLO-30 (AWS open data): 1 arc-second grid with flattened water bodies. Terrarium
+# tiles were dropped because they carry large radar spikes over lakes (60 m on 일감호).
+COG_URL = "https://copernicus-dem-30m.s3.amazonaws.com/{0}/{0}.tif"
 
 
-tiles = {}
-for f in glob.glob(os.path.join(DEM_DIR, "14_*_*.png")):
-    _, x, y = os.path.basename(f)[:-4].split("_")
-    tiles[(int(x), int(y))] = read_png(f)[1]
-Z = 14; N = 2 ** Z
+def http_range(url, start, length):
+    req = urllib.request.Request(url, headers={"Range": f"bytes={start}-{start + length - 1}", "User-Agent": "campus-map-builder/1.0"})
+    return urllib.request.urlopen(req, timeout=120).read()
 
 
-def elev_px(px, py):
-    tx, ty = int(px // 256), int(py // 256)
-    row = tiles[(tx, ty)][int(py) % 256]
-    x = (int(px) % 256) * 3
-    r, g, b = row[x], row[x + 1], row[x + 2]
-    return r * 256 + g + b / 256 - 32768
+class CopTile:
+    """Minimal reader for one tiled, deflate-compressed Float32 GeoTIFF (first image only)."""
+
+    def __init__(self, lat, lon):
+        ew = "E" if lon >= 0 else "W"
+        self.name = f"Copernicus_DSM_COG_10_N{lat:02d}_00_{ew}{abs(lon):03d}_00_DEM"
+        self.url = COG_URL.format(self.name)
+        self.lat, self.lon, self.tiles = lat, lon, {}
+        head = http_range(self.url, 0, 1 << 17)
+        end = "<" if head[:2] == b"II" else ">"
+        off = struct.unpack(end + "I", head[4:8])[0]
+        n = struct.unpack(end + "H", head[off:off + 2])[0]
+        tag = {}
+        size = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 11: 4, 12: 8}
+        code = {1: "B", 3: "H", 4: "I", 11: "f", 12: "d"}
+        for i in range(n):
+            e = head[off + 2 + i * 12:off + 14 + i * 12]
+            t, ty, cnt = struct.unpack(end + "HHI", e[:8])
+            if ty not in code:
+                continue
+            nb = size[ty] * cnt
+            raw = e[8:8 + nb] if nb <= 4 else head[struct.unpack(end + "I", e[8:12])[0]:][:nb]
+            tag[t] = struct.unpack(end + code[ty] * cnt, raw)
+        self.end, self.w, self.h = end, tag[256][0], tag[257][0]
+        self.tw, self.th, self.comp, self.pred = tag[322][0], tag[323][0], tag[259][0], tag.get(317, (1,))[0]
+        self.offs, self.cnts = tag[324], tag[325]
+        assert self.comp in (8, 32946), self.comp
+        self.dx = 1.0 / self.w  # degrees per pixel; rows are always 1/3600 degree
+
+    def tile(self, cache, ti, tj):
+        key = (ti, tj)
+        if key in self.tiles:
+            return self.tiles[key]
+        path = os.path.join(cache, f"{self.name}_{ti}_{tj}.f32")
+        if os.path.exists(path):
+            a = array.array("f"); a.frombytes(open(path, "rb").read())
+        else:
+            idx = tj * ((self.w + self.tw - 1) // self.tw) + ti
+            raw = zlib.decompress(http_range(self.url, self.offs[idx], self.cnts[idx]))
+            tw, th = self.tw, self.th
+            a = array.array("f", bytes(4 * tw * th))
+            if self.pred == 3:
+                stride = tw * 4
+                for r in range(th):
+                    row = bytearray(raw[r * stride:(r + 1) * stride])
+                    for i in range(1, stride):
+                        row[i] = (row[i] + row[i - 1]) & 255
+                    for c in range(tw):  # bytes are stored most significant first, plane by plane
+                        a[r * tw + c] = struct.unpack(">f", bytes((row[c], row[tw + c], row[2 * tw + c], row[3 * tw + c])))[0]
+            else:
+                a = array.array("f"); a.frombytes(raw)
+                if self.end == ">":
+                    a.byteswap()
+            os.makedirs(cache, exist_ok=True)
+            open(path + ".tmp", "wb").write(a.tobytes()); os.replace(path + ".tmp", path)
+        self.tiles[key] = a
+        return a
+
+    def sample(self, cache, col, row):
+        a = self.tile(cache, col // self.tw, row // self.th)
+        return a[(row % self.th) * self.tw + col % self.tw]
+
+
+# Work on the 1 arc-second cells around the campus. The model is a surface model, so buildings
+# and tree tops raise it: a grey-scale opening removes anything narrower than about 150 m.
+_cop = {}
+S_, W_, N_, E_ = BBOX
+MARGIN = 6
+cy0, cy1 = math.floor((90 - N_) * 3600) - MARGIN, math.ceil((90 - S_) * 3600) + MARGIN
+cx0, cx1 = math.floor((W_ + 180) * 3600) - MARGIN, math.ceil((E_ + 180) * 3600) + MARGIN
+gw, gh = cx1 - cx0 + 1, cy1 - cy0 + 1
+
+
+def cop_cell(cx, cy):
+    lon_i, lat_i = cx // 3600 - 180, 89 - cy // 3600
+    t = _cop.get((lat_i, lon_i))
+    if t is None:
+        t = _cop[(lat_i, lon_i)] = CopTile(lat_i, lon_i)
+    return t.sample(DEM_DIR, int((cx % 3600) * t.w / 3600), cy % 3600)
+
+
+dsm = [cop_cell(cx0 + i, cy0 + j) for j in range(gh) for i in range(gw)]
+
+
+def morph(src, pick, r=2):
+    def pass1(data, w, h, step_i, step_j):
+        out = list(data)
+        for j in range(h):
+            for i in range(w):
+                v = [data[max(0, min(h - 1, j + k * step_j)) * w + max(0, min(w - 1, i + k * step_i))] for k in range(-r, r + 1)]
+                out[j * w + i] = pick(v)
+        return out
+    return pass1(pass1(src, gw, gh, 1, 0), gw, gh, 0, 1)
+
+
+ground = morph(morph(dsm, min), max)
+for _ in range(2):  # light smoothing so the opening leaves no terraces
+    ground = [sum(ground[max(0, min(gh - 1, j + b)) * gw + max(0, min(gw - 1, i + a))] * (4 if a == b == 0 else 2 if a == 0 or b == 0 else 1)
+                  for a in (-1, 0, 1) for b in (-1, 0, 1)) / 16 for j in range(gh) for i in range(gw)]
 
 
 def _cr(p0, p1, p2, p3, t):
@@ -165,17 +228,12 @@ def _cr(p0, p1, p2, p3, t):
 
 
 def elev(lat, lon):
-    """Catmull-Rom bicubic sample of the terrarium DEM (smooth, no grid facets)."""
-    px = (lon + 180) / 360 * N * 256
-    r = math.radians(lat)
-    py = (1 - math.log(math.tan(r) + 1 / math.cos(r)) / math.pi) / 2 * N * 256
-    px -= 0.5; py -= 0.5
+    """Catmull-Rom bicubic sample of the bare-ground grid (cell centres at half arc-seconds)."""
+    px, py = (lon + 180) * 3600 - cx0 - 0.5, (90 - lat) * 3600 - cy0 - 0.5
     x0, y0 = math.floor(px), math.floor(py)
-    fx, fy = px - x0, py - y0
-    rows = []
-    for j in range(-1, 3):
-        rows.append(_cr(*(elev_px(x0 + i, y0 + j) for i in range(-1, 3)), fx))
-    return _cr(*rows, fy)
+    cell = lambda i, j: ground[max(0, min(gh - 1, j)) * gw + max(0, min(gw - 1, i))]
+    rows = [_cr(*(cell(x0 + i, y0 + j) for i in range(-1, 3)), px - x0) for j in range(-1, 3)]
+    return _cr(*rows, py - y0)
 
 
 BASE_ELEV = elev(LAT0, LON0)
@@ -298,8 +356,19 @@ for e in osm:
         w = ROAD_W.get(t["highway"])
         if not w:
             continue
+        # underground roads must neither be painted on the ground nor carve the hills above them
+        if t.get("tunnel", "no") != "no" or t.get("covered", "no") != "no" or t.get("indoor", "no") != "no":
+            continue
+        try:
+            if float(t.get("layer", 0)) < 0:
+                continue
+        except ValueError:
+            pass
         pts = [list(map(lambda v: round(v, 1), proj(p["lat"], p["lon"]))) for p in e["geometry"]]
-        roads.append({"w": w, "t": t["highway"], "p": pts})
+        rec = {"w": w, "t": t["highway"], "p": pts}
+        if t.get("bridge", "no") != "no":
+            rec["br"] = 1  # keeps its deck height: the ground below is left alone
+        roads.append(rec)
     elif e["type"] in ("way", "relation") and ("landuse" in t or "leisure" in t or "natural" in t or t.get("amenity") == "parking"):
         k = t.get("landuse") or t.get("leisure") or t.get("natural") or "parking"
         m = {"grass": "grass", "park": "grass", "recreation_ground": "grass", "meadow": "grass",
@@ -313,6 +382,10 @@ for e in osm:
         for r in outer_rings(e):
             if len(r) >= 3:
                 areas.append({"k": m, "p": r})
+        if m == "water":  # islands in lakes
+            for r in inner_rings(e):
+                if len(r) >= 3 and abs(area(r)) > 40:
+                    areas.append({"k": "wood", "p": r, "island": 1})
 
 
 for x in CFG["extra"]:
@@ -325,7 +398,7 @@ for x in CFG["extra"]:
 # ---------------------------------------------------------------- terrain shaping
 # Real campuses are graded: roads follow smooth grades, sports fields and building
 # pads are flat, and wooded hills keep small natural bumps. Apply that to the DEM.
-import base64, array
+import base64
 
 H = heights  # flat list nz*nx
 
@@ -418,8 +491,8 @@ def add_infill(cfg):
             key = f"{x:.1f},{z:.1f}"
             px = x + (hash01(key + "x") - 0.5) * 5; pz = z + (hash01(key + "z") - 0.5) * 5
             x += step
-            if not pip(region, px, pz) or any(pip(q, px, pz) for q in blocked):
-                continue
+            if math.hypot(px, pz) < 45 or not pip(region, px, pz) or any(pip(q, px, pz) for q in blocked):
+                continue  # the gate plaza stays open
             best, ux, uz, ok = 1e9, 1.0, 0.0, True
             for a, b, w, t in near(road_bins, px, pz):
                 d = seg_dist(px, pz, a[0], a[1], b[0], b[1])[0]
@@ -474,7 +547,7 @@ for j in range(nz):
 # 2. roads: smooth grade along the centreline, flat across the carriageway
 for r in roads:
     pts = r["p"]
-    if len(pts) < 2:
+    if len(pts) < 2 or r.get("br"):
         continue
     w = r["w"]
     # densify and smooth heights along the road
@@ -500,6 +573,36 @@ for r in roads:
                 return None
             return ha + (hb - ha) * t, 1 - smoothstep(inner, outer, d)
         blend_region(min(ax, bx) - outer, min(az, bz) - outer, max(ax, bx) + outer, max(az, bz) + outer, fn)
+
+# 2b. ponds and lakes lie level, slightly below their banks
+for a in areas:
+    if a["k"] != "water":
+        continue
+    pts = a["p"]
+    x0b, z0b, x1b, z1b = bbox(pts)
+    if x0b < x_min or z0b < z_min or x1b > x_min + (nx - 1) * STEP or z1b > z_min + (nz - 1) * STEP or (x1b - x0b) * (z1b - z0b) > 600000:
+        continue  # rivers running off the map keep their natural fall
+    shore = sorted(hgt(x, z) for x, z in pts)
+    target = shore[len(shore) // 4] - 0.8
+
+    def fn(x, z, h, pts=pts, target=target):
+        d = poly_dist(pts, x, z)
+        if d > 7:
+            return None
+        return target, 1 - smoothstep(-1, 7, d)
+    blend_region(x0b - 7, z0b - 7, x1b + 7, z1b + 7, fn)
+
+for a in areas:
+    if not a.get("island"):
+        continue
+    pts = a["p"]
+    x0b, z0b, x1b, z1b = bbox(pts)
+    level = min(hgt(x, z) for x, z in pts)
+
+    def fn(x, z, h, pts=pts, level=level):
+        d = poly_dist(pts, x, z)
+        return (level + 2.2, 1 - smoothstep(-3, 1.5, d)) if d < 1.5 else None
+    blend_region(x0b - 2, z0b - 2, x1b + 2, z1b + 2, fn)
 
 # 3. flat areas: pitches, tracks, parking
 for a in areas:
@@ -549,7 +652,7 @@ out = {
     "origin": [LAT0, LON0], "baseElev": round(BASE_ELEV, 1),
     "terrain": {"x0": round(x_min, 1), "z0": round(z_min, 1), "step": STEP, "nx": nx, "nz": nz, "h16": terrain_b64},
     "buildings": buildings, "roads": roads, "areas": areas, "campus": campus,
-    "attribution": "© OpenStreetMap contributors (ODbL); terrain: Mapzen/AWS Terrain Tiles",
+    "attribution": "© OpenStreetMap contributors (ODbL); terrain: Copernicus DEM GLO-30",
 }
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))

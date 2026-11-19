@@ -1,14 +1,14 @@
 // Building models. Campus landmarks are modelled by hand from photo references
 // (shape, storeys, colonnades, towers, roofs, materials); everything else gets a
 // style from its OSM type (Korean apartment blocks, houses, schools, shops...).
-import { WIN } from './facade.js?v=64';
-import { obb, area, makeRng, pip } from './buildings.js?v=64';
-import { cauLandmarks } from './models-cau.js?v=64';
-import { skkuLandmarks } from './models-skku.js?v=64';
-import { koreaCampus } from './models-korea.js?v=64';
-import { yonseiCampus } from './models-yonsei.js?v=64';
-import { snuCampus } from './models-snu.js?v=64';
-import { seoulCampuses } from './models-seoul.js?v=64';
+import { WIN } from './facade.js?v=65';
+import { obb, area, makeRng, pip } from './buildings.js?v=65';
+import { cauLandmarks } from './models-cau.js?v=65';
+import { skkuLandmarks } from './models-skku.js?v=65';
+import { koreaCampus } from './models-korea.js?v=65';
+import { yonseiCampus } from './models-yonsei.js?v=65';
+import { snuCampus } from './models-snu.js?v=65';
+import { seoulCampuses } from './models-seoul.js?v=65';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);

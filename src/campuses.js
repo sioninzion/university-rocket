@@ -68,15 +68,15 @@ export const CAMPUSES = {
   },
   konkuk: {
     short: '건국대', full: '건국대학교 서울캠퍼스', tag: 'KONKUK SEOUL CAMPUS', style: 'konkuk',
-    hero: { id: 367582526, name: '상허기념도서관', view: [0.95, -0.3] },
-    data: 'data/konkuk.json', pad: [-36, 11], launchTarget: [-509, 161],
-    outerChunkScale: 2.9, liteOuter: true, treeClear: [[-36, 11, 20]],
+    hero: { id: 367582526, name: '상허기념도서관', view: [0.93, 0.38] },
+    data: 'data/konkuk.json', pad: [-24, 29], launchTarget: [-253, 309],
+    outerChunkScale: 2.9, liteOuter: true, treeClear: [[-24, 29, 20]],
   },
   dongguk: {
     short: '동국대', full: '동국대학교 서울캠퍼스', tag: 'DONGGUK SEOUL CAMPUS', style: 'dongguk',
-    hero: { id: 268231222, name: '명진관', view: [0.97, -0.26] },
-    data: 'data/dongguk.json', pad: [-37, 10], launchTarget: [-358, 95],
-    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-37, 10, 20]],
+    hero: { id: 270032443, name: '본관', view: [0.94, 0.34] },
+    data: 'data/dongguk.json', pad: [-31, -22], launchTarget: [-295, -209],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-31, -22, 20]],
   },
   hongik: {
     short: '홍익대', full: '홍익대학교 서울캠퍼스', tag: 'HONGIK SEOUL CAMPUS', style: 'hongik',

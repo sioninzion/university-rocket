@@ -1,5 +1,5 @@
 // 연세대학교 신촌캠퍼스: ivy-covered stone halls around 언더우드 동산, tan stone along 백양로.
-import { collegiate } from './models-korea.js?v=64';
+import { collegiate } from './models-korea.js?v=65';
 
 export function yonseiCampus(h) {
   const { WIN, obb, frame, rectL, centroid, area, circle } = h;
