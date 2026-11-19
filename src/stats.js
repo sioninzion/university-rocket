@@ -59,7 +59,7 @@ export function initStats(target) {
   addEventListener('pagehide', flush);
 }
 
-// a player is counted when they start a game (출격 or a pick from the campus picker), once per page load;
+// a player is counted when they start a game (시작하기 on the start screen or in the campus picker), once per page load;
 // the server counts each browser once a day and once in total
 export function countPlayer() {
   if (counted) return;
