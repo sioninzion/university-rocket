@@ -1,12 +1,11 @@
-// Shared play statistics kept on Supabase (see supabase/stats.sql):
-// players today / in total and buildings brought down today / in total, shown in a small corner line.
-// The anon key is meant to be public: the tables are closed and only three counter functions are callable.
-const SUPABASE_URL = '';
-const SUPABASE_ANON_KEY = '';
+// Shared play statistics kept by the Vercel function api/stats.js (Upstash Redis behind it):
+// players today / in total and buildings brought down today / in total, shown in a small line.
+// The GitHub Pages copy of the game reports to the same server.
+const API = 'https://university-rocket.vercel.app/api/stats';
 
 const ID_KEY = 'univ-visitor';
 const S = { today_users: 0, total_users: 0, today_buildings: 0, total_buildings: 0 };
-let el = null, pending = 0, timer = 0, loaded = false;
+let el = null, pending = 0, timer = 0, loaded = false, started = false;
 
 // 999 → 999, 1234 → 1.2K, 12345 → 12K, 1.5M, 2.3B
 export function fmt(n) {
@@ -17,14 +16,10 @@ export function fmt(n) {
   return String(n);
 }
 
-async function rpc(fn, body) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-    method: 'POST', keepalive: true,
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body || {}),
-  });
-  if (!r.ok) throw new Error(`${fn} ${r.status}`);
-  return r.status === 204 ? null : r.json();
+async function call(body) {
+  const r = await fetch(API, body ? { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  if (!r.ok) throw new Error(`stats ${r.status}`);
+  return r.json();
 }
 
 function visitorId() {
@@ -49,24 +44,25 @@ function take(d) { if (d) { Object.assign(S, d); loaded = true; render(); } }
 
 function flush() {
   clearTimeout(timer); timer = 0;
-  if (!pending || !SUPABASE_URL) return;
+  if (!pending) return;
   const n = pending; pending = 0;
-  rpc('add_destroyed', { p_n: n }).catch(() => { pending += n; });
+  call({ destroyed: n }).catch(() => { pending += n; });
 }
 
 export function initStats(target) {
   el = target;
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  if (started) return;
+  started = true;
   const id = visitorId();
-  (id ? rpc('track_visit', { p_id: id }) : rpc('get_stats')).then(take).catch(() => {});
-  setInterval(() => { if (!document.hidden) rpc('get_stats').then(take).catch(() => {}); }, 60000);
+  call(id ? { id } : null).then(take).catch(() => {});
+  setInterval(() => { if (!document.hidden) call(null).then(take).catch(() => {}); }, 60000);
   addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
   addEventListener('pagehide', flush);
 }
 
 // a building collapsed in this game: show it at once, report in batches
 export function countDestroyed(n = 1) {
-  if (!SUPABASE_URL || n <= 0) return;
+  if (n <= 0) return;
   pending += n; S.today_buildings += n; S.total_buildings += n; render();
   if (!timer) timer = setTimeout(flush, 8000);
 }

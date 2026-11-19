@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=75';
-import { City, pip } from './buildings.js?v=75';
-import { buildStructures } from './models.js?v=75';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=75';
-import { Particles, Debris } from './fx.js?v=75';
-import { Input } from './input.js?v=75';
-import { Sfx } from './audio.js?v=75';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=75';
-import { initStats, countDestroyed } from './stats.js?v=75';
+import { NIGHT } from './facade.js?v=76';
+import { City, pip } from './buildings.js?v=76';
+import { buildStructures } from './models.js?v=76';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=76';
+import { Particles, Debris } from './fx.js?v=76';
+import { Input } from './input.js?v=76';
+import { Sfx } from './audio.js?v=76';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=76';
+import { initStats, countDestroyed } from './stats.js?v=76';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -56,7 +56,7 @@ async function main(opts = {}) {
   setupCampusUi();
   initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=75`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=76`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -1675,7 +1675,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=75');
+    const { runPicker } = await import('./picker.js?v=76');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
