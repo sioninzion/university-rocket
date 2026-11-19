@@ -81,8 +81,8 @@ export const CAMPUSES = {
   hongik: {
     short: '홍익대', full: '홍익대학교 서울캠퍼스', tag: 'HONGIK SEOUL CAMPUS', style: 'hongik',
     hero: { id: 1441620363, name: '홍문관', view: [0.45, -0.89] },
-    data: 'data/hongik.json', pad: [24, 15], launchTarget: [67, 42],
-    outerChunkScale: 2.4, liteOuter: true, treeClear: [[24, 15, 20]],
+    data: 'data/hongik.json', pad: [-10, -21], launchTarget: [67, 42],
+    outerChunkScale: 2.4, liteOuter: true, treeClear: [[-10, -21, 20]],
   },
 };
 
