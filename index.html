@@ -232,6 +232,19 @@
     #weapons .ws { font-size: 8px; }
     #weapons small { font-size: 7px; }
   }
+  /* phone-sized screens (portrait or landscape): a smaller joystick and weapon bar */
+  @media (max-width: 480px), (max-height: 480px) {
+    #joyBase { left: calc(84px + var(--safe-l)); bottom: calc(34px + var(--safe-b)); width: 100px; height: 100px; margin-left: -50px; }
+    #joyBase.on { margin: -50px 0 0 -50px; }
+    #joyKnob { width: 42px; height: 42px; border-width: 2px; }
+    #weapons button, body #weapons button { width: 33px; height: 37px; padding-top: 2px; }
+    #weapons button i { font-size: 13px; }
+    #weapons .ws { font-size: 7.5px; margin-top: 0; }
+    #weapons small { font-size: 6px; bottom: 1px; }
+    #weapons button.locked::after { bottom: 9px; height: 2px; }
+    #weapons { gap: 2px; padding: 3px; }
+  }
+  @media (max-aspect-ratio: 1/1) and (max-width: 480px) { #weapons button, body #weapons button { width: 34px; height: 34px; } }
 </style>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
@@ -319,6 +332,6 @@
 
 <div id="fadeBlack"><span id="fadeMsg" role="status"></span></div>
 
-<script type="module" src="src/main.js?v=91"></script>
+<script type="module" src="src/main.js?v=92"></script>
 </body>
 </html>

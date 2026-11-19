@@ -26,6 +26,7 @@ export class Input {
     if (e.clientX < innerWidth * 0.5) {
       if (this.joyId !== null) return;
       this.joyId = e.pointerId; this.cx = e.clientX; this.cy = e.clientY;
+      this.R = Math.max(30, (this.base.offsetWidth || 130) * 0.46); // knob travel follows the drawn size (smaller on phones)
       this.base.style.left = e.clientX + 'px'; this.base.style.top = e.clientY + 'px';
       this.base.style.bottom = 'auto';
       this.base.classList.add('on');
