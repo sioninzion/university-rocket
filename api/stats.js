@@ -31,7 +31,10 @@ function readBody(req) {
 
 module.exports = async (req, res) => {
   const origin = req.headers.origin || '';
-  if (ORIGINS.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  if (req.method === 'GET') {
+    // the numbers are public and the CDN caches this answer for every site alike, so any page may read it
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (ORIGINS.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
