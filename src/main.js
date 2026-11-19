@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=86';
-import { City, pip } from './buildings.js?v=86';
-import { buildStructures } from './models.js?v=86';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=86';
-import { Particles, Debris } from './fx.js?v=86';
-import { Input } from './input.js?v=86';
-import { Sfx } from './audio.js?v=86';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=86';
-import { initStats, countDestroyed, countPlayer } from './stats.js?v=86';
+import { NIGHT } from './facade.js?v=87';
+import { City, pip } from './buildings.js?v=87';
+import { buildStructures } from './models.js?v=87';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=87';
+import { Particles, Debris } from './fx.js?v=87';
+import { Input } from './input.js?v=87';
+import { Sfx } from './audio.js?v=87';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=87';
+import { initStats, countDestroyed, countPlayer } from './stats.js?v=87';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -56,7 +56,7 @@ async function main(opts = {}) {
   setupCampusUi();
   initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=86`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=87`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -1273,6 +1273,7 @@ async function main(opts = {}) {
     $('ratio').textContent = ((1 - alive / city.totalChunks) * 100).toFixed(2) + '%';
   }
 
+  const GRAVITY = 9.8 * 0.25, GRAVITY_SPEED = 0.15; // gentle gravity: path bend (m/s²) and speed change at a vertical climb/dive
   function computeFwd() {
     eul.set(S.pitch, -S.yaw, 0, 'YXZ');
     return fwd.set(0, 0, -1).applyEuler(eul);
@@ -1317,6 +1318,9 @@ async function main(opts = {}) {
         const heavy = S.weapon === 'ballistic' ? 0.8 : 1;
         S.yaw += inp.x * 1.45 * heavy * dt;
         S.pitch = clamp(S.pitch + inp.y * 1.25 * heavy * dt, -1.4, 1.56);
+        // gravity, kept gentle: once off the pad the flight path slowly bends toward the ground
+        // (a real g would bend it at g·cos(pitch)/speed; a quarter of that, about 3° a second at cruise)
+        if (S.t > 1.2) S.pitch = clamp(S.pitch - GRAVITY * Math.cos(S.pitch) / Math.max(S.speed, 30) * dt, -1.4, 1.56);
         S.roll += (-inp.x * 0.8 - S.roll) * Math.min(1, dt * 6);
         let targetSpeed = 52;
         if (S.weapon === 'ballistic') {
@@ -1356,6 +1360,8 @@ async function main(opts = {}) {
           S.fuel = clamp(S.fuel + (S.boosting ? -0.32 : 0.11) * dt, 0, 1);
           if (S.boosting) targetSpeed = 120;
         }
+        // climbing costs a little speed, diving gains a little (not for the slow fixed-speed carriers)
+        if (S.weapon !== 'hunter' && S.weapon !== 'laser') targetSpeed *= 1 - GRAVITY_SPEED * Math.sin(S.pitch);
         const dv = targetSpeed - S.speed;
         S.speed += clamp(dv, -40 * dt, (S.boosting ? 95 : 32) * dt);
         if (!S.dashed) computeFwd();
@@ -1676,7 +1682,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=86');
+    const { runPicker } = await import('./picker.js?v=87');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
