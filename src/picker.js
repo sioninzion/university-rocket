@@ -2,12 +2,12 @@
 // order. Swipe to browse; choosing one fires a rocket at it, then the screen fades to black and
 // the game starts. It runs in its own light scene, torn down before the campus itself is built.
 import * as THREE from 'three';
-import { City, makeRng } from './buildings.js?v=66';
-import { buildStructures } from './models.js?v=66';
-import { buildSky } from './world.js?v=66';
-import { Particles, Debris } from './fx.js?v=66';
-import { Sfx } from './audio.js?v=66';
-import { CAMPUSES, selectedCampusId } from './campuses.js?v=66';
+import { City, makeRng } from './buildings.js?v=67';
+import { buildStructures } from './models.js?v=67';
+import { buildSky } from './world.js?v=67';
+import { Particles, Debris } from './fx.js?v=67';
+import { Sfx } from './audio.js?v=67';
+import { CAMPUSES, selectedCampusId } from './campuses.js?v=67';
 
 const SPACING = 320, FLIGHT = 1.05;
 const FADE_DELAY = 0.9, FADE_TIME = 0.5; // seconds after the blast
@@ -39,7 +39,7 @@ export async function runPicker({ enterFullscreen }) {
   const entries = Object.entries(CAMPUSES).sort((a, b) => a[1].short.localeCompare(b[1].short, 'ko'));
   const box = $('picker'), msg = $('pickMsg'), btn = $('pickGo'), black = $('fadeBlack');
   box.classList.add('open');
-  const heroes = await (await fetch('data/heroes.json?v=66')).json();
+  const heroes = await (await fetch('data/heroes.json?v=67')).json();
   await new Promise((r) => { requestAnimationFrame(r); setTimeout(r, 60); });
 
   // ------------------------------------------------------------ scene
@@ -106,7 +106,7 @@ export async function runPicker({ enterFullscreen }) {
     const { c } = list[i];
     $('pickName').textContent = c.short;
     $('pickFull').textContent = `${c.full} · ${c.hero.name}`;
-    btn.textContent = `🚀 ${c.short} 부수기`;
+    btn.textContent = '🚀 출격!';
     [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
     $('pickPrev').disabled = i === 0; $('pickNext').disabled = i === list.length - 1;
   }
@@ -145,7 +145,7 @@ export async function runPicker({ enterFullscreen }) {
     box.classList.add('firing');
     sfx.init(); sfx.engine(true, true);
     enterFullscreen();
-    dataP = fetch(`${hero.c.data}?v=66`).then(r => r.json()); // start downloading the campus during the show
+    dataP = fetch(`${hero.c.data}?v=67`).then(r => r.json()); // start downloading the campus during the show
     dataP.catch(() => {});
     const stub = { height: () => hero.base };
     fx = { fire: new Particles(hero.inner, 900, true), smoke: new Particles(hero.inner, 900, false), debris: new Debris(hero.inner, 700, stub), flash: new THREE.PointLight(0xffa955, 0, 240, 1.2) };
