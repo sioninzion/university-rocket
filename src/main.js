@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=73';
-import { City, pip } from './buildings.js?v=73';
-import { buildStructures } from './models.js?v=73';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=73';
-import { Particles, Debris } from './fx.js?v=73';
-import { Input } from './input.js?v=73';
-import { Sfx } from './audio.js?v=73';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=73';
+import { NIGHT } from './facade.js?v=74';
+import { City, pip } from './buildings.js?v=74';
+import { buildStructures } from './models.js?v=74';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=74';
+import { Particles, Debris } from './fx.js?v=74';
+import { Input } from './input.js?v=74';
+import { Sfx } from './audio.js?v=74';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=74';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -54,7 +54,7 @@ function enterFullscreen() {
 async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=73`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=74`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -806,7 +806,6 @@ async function main(opts = {}) {
     S.orbit = Math.atan2(camera.position.x - p.x, camera.position.z - p.z);
     setFlames(false); sfx.engine(false); sfx.splash(hit);
     S.shots++;
-    toast('풍덩! 물에 빠졌어요');
     updateHud();
   }
   function updateSink(dt) {
@@ -1674,7 +1673,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=73');
+    const { runPicker } = await import('./picker.js?v=74');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
