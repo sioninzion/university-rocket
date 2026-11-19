@@ -9,6 +9,10 @@
 - **연세대학교 신촌캠퍼스**: 담쟁이 덮인 언더우드관, 중앙도서관, 백주년기념관 등
 - **서울대학교 관악캠퍼스**: 정문 샤 조형물, 규장각, 중앙도서관, 미술관 등과 관악산 지형
 - **한양대, 서강대, 한국외대, 서울시립대, 건국대, 동국대, 홍익대 서울캠퍼스**: 실제 지도·지형과 학교별 건물 색, 본관·홍문관 등 대표 건물
+- **국민대학교**: 16층 북악관, 성곡도서관, 북악산 자락 지형 (지도에 없는 정릉동 주택은 자동 생성)
+- **숭실대학교**: 아치 지붕 정문, 형남공학관, 안익태기념관
+- **세종대학교**: 한옥 정문, 아사달 연못 앞 박물관, 대양AI센터
+- **단국대학교 죽전캠퍼스**: 돔을 얹은 범정관과 분수 광장, 법화산 자락 지형
 
 ## 조작
 - **왼쪽 화면 드래그**: 조이스틱으로 로켓 조종 (상하 반전 버튼 있음)
@@ -48,7 +52,7 @@ python3 tools/serve.py 8792   # http://localhost:8792
 python3 tools/build_data.py cau osm_all.json dem_cache data/cau.json
 ```
 
-학교를 추가하려면 `tools/build_data.py`의 `CAMPUSES`와 `src/campuses.js`에 항목을 넣으면 됩니다.
+학교를 추가하려면 `tools/build_data.py`의 `CAMPUSES`와 `src/campuses.js`에 항목을 넣으면 됩니다. 지도에 없는 주택을 채울 때는 `infill`에 `regions`(채울 구역 목록), `avoid`(피할 구역 종류), `tallGap`(고층 건물과 띄울 거리)을 지정할 수 있습니다.
 
 ## 출처
 - 지도 데이터 © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)

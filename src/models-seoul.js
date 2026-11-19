@@ -1,9 +1,9 @@
 // Seven Seoul campuses built from one kit: each gets its own palette for ordinary buildings
 // and hand-made models for the landmarks that define it.
-import { hanokBuilder } from './models-skku.js?v=70';
-import { collegiate } from './models-korea.js?v=70';
+import { hanokBuilder } from './models-skku.js?v=71';
+import { collegiate } from './models-korea.js?v=71';
 
-function kit(h) {
+export function kit(h) {
   const { WIN, obb, frame, rectL, centroid, area, clipHalf, facingEdge } = h;
   const office = (wall, o = {}) => ({ wall, trim: '#e9e6dd', roof: '#7c7f82', win: WIN.GRID, bay: 3.3, floorH: 3.8, groundH: 4.6,
     cornice: { h: 0.5, d: 0.3 }, parapet: 1.0, plinth: { h: 0.9, d: 0.2, col: '#9d9a91' }, ...o });

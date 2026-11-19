@@ -84,6 +84,30 @@ export const CAMPUSES = {
     data: 'data/hongik.json', pad: [-10, -21], launchTarget: [67, 42],
     outerChunkScale: 2.4, liteOuter: true, treeClear: [[-10, -21, 20]],
   },
+  kookmin: {
+    short: '국민대', full: '국민대학교', tag: 'KOOKMIN UNIVERSITY', style: 'kookmin',
+    hero: { id: 172246889, name: '북악관', view: [-0.62, 0.79] },
+    data: 'data/kookmin.json', pad: [32, -34], launchTarget: [192, -120],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[32, -34, 20]],
+  },
+  soongsil: {
+    short: '숭실대', full: '숭실대학교', tag: 'SOONGSIL UNIVERSITY', style: 'soongsil',
+    hero: { id: 1381653405, name: '형남공학관', view: [-0.96, 0.28] },
+    data: 'data/soongsil.json', pad: [50, -31], launchTarget: [139, 15],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[50, -31, 20]],
+  },
+  sejong: {
+    short: '세종대', full: '세종대학교', tag: 'SEJONG UNIVERSITY', style: 'sejong',
+    hero: { id: 101293858, name: '박물관', view: [-0.66, 0.75] },
+    data: 'data/sejong.json', pad: [-58, -10], launchTarget: [3, -263],
+    outerChunkScale: 2.4, liteOuter: true, treeClear: [[-58, -10, 20], [-12, 8, 11]],
+  },
+  dankook: {
+    short: '단국대', full: '단국대학교 죽전캠퍼스', tag: 'DANKOOK JUKJEON CAMPUS', style: 'dankook',
+    hero: { id: 455430338, name: '범정관', view: [-0.72, -0.7] },
+    data: 'data/dankook.json', pad: [20, 56], launchTarget: [98, 182],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[20, 56, 22]],
+  },
 };
 
 const KEY = 'univ-campus';

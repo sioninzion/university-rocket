@@ -97,6 +97,35 @@ CAMPUSES = {
         "outline": ("way", 216908773),
         "extra": [],
     },
+    "kookmin": {  # 국민대학교 (정릉): mountains to the north and west, 정릉동 houses mostly missing from OSM
+        "origin": (37.61115, 126.99469), "bbox": (37.604, 126.988, 37.617, 127.004),
+        "outline": ("way", 173018858),
+        # houses only east and south-east of campus: the roads through the western forest stay bare
+        "extra": [], "infill": {"step": 22.0, "avoid": ["grass"], "tallGap": 22, "region": [(37.6170, 126.9968), (37.6170, 127.0040), (37.6040, 127.0040), (37.6040, 126.9952),
+                                                         (37.6074, 126.9952), (37.6109, 126.9966), (37.6119, 126.9968)]},
+    },
+    "soongsil": {  # 숭실대학교 (상도동)
+        "origin": (37.49598, 126.95438), "bbox": (37.4895, 126.950, 37.5025, 126.966),
+        "outline": ("relation", 19035920),
+        "extra": [], "infill": {"step": 26.0, "avoid": ["grass"], "tallGap": 22},
+    },
+    "sejong": {  # 세종대학교 (군자동): the gate faces 어린이대공원 정문 across 능동로
+        "origin": (37.54914, 127.07525), "bbox": (37.544, 127.066, 37.557, 127.082),
+        "outline": ("way", 965940829),
+        # 정문: a hanok gate across the drive in from 능동로 (not mapped in OSM)
+        "extra": [{"id": 9900000001, "n": "정문", "k": "yes", "lv": 1, "h": 9.0, "p": [[-5.4, 3.0], [-12.4, 16.2], [-18.6, 13.0], [-11.6, -0.2]]}], "infill": {"step": 26.0, "avoid": ["grass"], "tallGap": 22},
+    },
+    "dankook": {  # 단국대학교 죽전캠퍼스 (용인): apartment towers all around
+        "origin": (37.32345, 127.12553), "bbox": (37.309, 127.116, 37.328, 127.140), "step": 5.0,
+        # OSM has the apartment towers; fill only the villa and village blocks it leaves empty
+        "infill": {"step": 22.0, "avoid": ["grass"], "tallGap": 22, "regions": [
+            [(37.32105, 127.11600), (37.32105, 127.12333), (37.31602, 127.12453), (37.31590, 127.12109), (37.31769, 127.11899), (37.31793, 127.11600)],
+            [(37.31805, 127.12708), (37.31841, 127.12917), (37.31674, 127.13007), (37.31278, 127.13007), (37.31278, 127.12738), (37.31554, 127.12678)],
+            [(37.32596, 127.12453), (37.32620, 127.12917), (37.32405, 127.12917), (37.32405, 127.12588), (37.32345, 127.12498), (37.32441, 127.12453)],
+            [(37.32500, 127.13696), (37.32500, 127.13995), (37.31889, 127.13995), (37.32009, 127.13755), (37.32201, 127.13696)]]},
+        "outline": ("way", 757042589),
+        "extra": [],
+    },
 }
 
 CAMPUS_ID, OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
@@ -484,11 +513,21 @@ for a in CFG.get("areas", []):
 def add_infill(cfg):
     """Small generated houses on city blocks OSM leaves empty (deterministic)."""
     s, w, n, e = BBOX
-    region = [list(proj(la, lo)) for la, lo in cfg.get("region", [(s, w), (s, e), (n, e), (n, w)])]
+    regions = [[list(proj(la, lo)) for la, lo in r] for r in cfg.get("regions", [cfg.get("region", [(s, w), (s, e), (n, e), (n, w)])])]
+    region = [p for r in regions for p in r]  # bounding points of all regions
     outline = [r for e in osm if (e["type"], e["id"]) == CFG["outline"] for r in outer_rings(e)]
-    blocked = [a["p"] for a in areas if a["k"] in ("wood", "water", "pitch", "track", "parking")] + outline
+    # optional: "avoid" adds area kinds (e.g. park grass); "tallGap" keeps houses that far from 8+ storey blocks,
+    # so apartment-complex courtyards stay open
+    blocked = [a["p"] for a in areas if a["k"] in ("wood", "water", "pitch", "track", "parking", *cfg.get("avoid", []))] + outline
+    tall_gap = cfg.get("tallGap", 0)
     BIN = 30.0
-    road_bins, bld_bins = {}, {}
+    road_bins, bld_bins, tall_bins = {}, {}, {}
+    for b in buildings:
+        if tall_gap and b["lv"] >= 8:
+            x0b, z0b, x1b, z1b = bbox(b["p"])
+            for i in range(int(x0b // BIN), int(x1b // BIN) + 1):
+                for j in range(int(z0b // BIN), int(z1b // BIN) + 1):
+                    tall_bins.setdefault((i, j), []).append(b["p"])
     for r in roads:
         for a, b in zip(r["p"], r["p"][1:]):
             n = max(1, int(math.hypot(b[0] - a[0], b[1] - a[1]) / 12))
@@ -514,8 +553,11 @@ def add_infill(cfg):
             key = f"{x:.1f},{z:.1f}"
             px = x + (hash01(key + "x") - 0.5) * 5; pz = z + (hash01(key + "z") - 0.5) * 5
             x += step
-            if math.hypot(px, pz) < 45 or not pip(region, px, pz) or any(pip(q, px, pz) for q in blocked):
+            if math.hypot(px, pz) < 45 or not any(pip(r, px, pz) for r in regions) or any(pip(q, px, pz) for q in blocked):
                 continue  # the gate plaza stays open
+            if tall_gap and any(pip(t, px, pz) or min(seg_dist(px, pz, *t[i - 1], *t[i])[0] for i in range(len(t))) < tall_gap
+                                for t in near(tall_bins, px, pz)):
+                continue
             best, ux, uz, ok = 1e9, 1.0, 0.0, True
             for a, b, w, t in near(road_bins, px, pz):
                 d = seg_dist(px, pz, a[0], a[1], b[0], b[1])[0]
