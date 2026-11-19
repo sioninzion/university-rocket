@@ -5,7 +5,7 @@ const API = 'https://university-rocket.vercel.app/api/stats';
 
 const ID_KEY = 'univ-visitor';
 const S = { today_users: 0, total_users: 0, today_buildings: 0, total_buildings: 0 };
-let el = null, pending = 0, timer = 0, loaded = false, started = false;
+let el = null, pending = 0, timer = 0, loaded = false, started = false, counted = false;
 
 // 999 → 999, 1234 → 1.2K, 12345 → 12K, 1.5M, 2.3B
 export function fmt(n) {
@@ -53,11 +53,19 @@ export function initStats(target) {
   el = target;
   if (started) return;
   started = true;
-  const id = visitorId();
-  call(id ? { id } : null).then(take).catch(() => {});
+  call(null).then(take).catch(() => {}); // opening the page only reads the numbers
   setInterval(() => { if (!document.hidden) call(null).then(take).catch(() => {}); }, 60000);
   addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
   addEventListener('pagehide', flush);
+}
+
+// a player is counted when they start a game (출격 or a pick from the campus picker), once per page load;
+// the server counts each browser once a day and once in total
+export function countPlayer() {
+  if (counted) return;
+  counted = true;
+  const id = visitorId();
+  if (id) call({ id }).then(take).catch(() => { counted = false; });
 }
 
 // a building collapsed in this game: show it at once, report in batches
