@@ -1,7 +1,7 @@
 // Seven Seoul campuses built from one kit: each gets its own palette for ordinary buildings
 // and hand-made models for the landmarks that define it.
-import { hanokBuilder } from './models-skku.js?v=65';
-import { collegiate } from './models-korea.js?v=65';
+import { hanokBuilder } from './models-skku.js?v=66';
+import { collegiate } from './models-korea.js?v=66';
 
 function kit(h) {
   const { WIN, obb, frame, rectL, centroid, area, clipHalf, facingEdge } = h;
@@ -48,11 +48,28 @@ function kit(h) {
 
 export const seoulCampuses = {
   hanyang(h) {
-    const k = kit(h), { WIN, office, brick, glass, block } = k, PALE = '#d9d4c8', TAN = '#c9bda8';
+    const k = kit(h), { WIN, office, brick, glass, block } = k, PALE = '#d9d4c8', TAN = '#c9bda8', GREEN = '#4d7558';
+    const stone = (o = {}) => office('#c8c1b0', { trim: '#e7e2d7', roof: GREEN, win: WIN.CLASSIC, bay: 3.1, floorH: 3.9, groundH: 4.5, parapet: 0,
+      cornice: { h: 0.6, d: 0.35 }, plinth: { h: 1.2, d: 0.2, col: '#a59e8e' }, ...o });
+    const { hall } = collegiate(h, { stone, roof: GREEN, merlon: '#c8c1b0', trim: '#e7e2d7' });
     return { landmarks: {
-      187185124: (b) => k.entranceHall(b, { floors: 8, st: office(PALE, { floorH: 3.9, cornice: { h: 1, d: 0.6 } }), entry: glass(), face: [-0.9, -0.43], extra: 1, width: 18 }), // 본관
+      // 본관: grey dressed stone, green roof with little white dormers, white-gabled end pavilions,
+      // a six-column portico with a pediment over a broad flight of steps
+      187185124(b) {
+        const FACE = [-0.31, 0.95], specs = hall(b, { floors: 4, face: FACE, st: stone(), towerW: 24 });
+        const o = k.obb(b.p), L = k.frame(o), e = k.facingEdge(k.rectL(L, -o.hl, o.hl, -o.hw * 0.86, o.hw * 0.86), FACE[0], FACE[1]);
+        if (e) {
+          const P = k.onEdge(e), m = e.L / 2, W = 21, q = (a, c, d0, d1) => [P(m + a, d0), P(m + c, d0), P(m + c, d1), P(m + a, d1)];
+          specs.push({ poly: q(-W / 2 - 1, W / 2 + 1, 6, -0.2), h: 1.4, style: { wall: '#bdb7a9', trim: '#d4cfc3', roof: '#cbc6ba', win: WIN.NONE } });
+          const c = h.colonnade(specs, { a: P(m - W / 2, 0), L: W, nx: e.nx, nz: e.nz, ux: e.ux, uz: e.uz }, { offset: 4.4, spacing: 3.6, r: 0.66, h: 14.6, pad: 1.5, entab: 1.5 });
+          specs[c.entab].roof = { type: 'gable', h: 3.2, axis: [e.nx, e.nz], color: '#dcd6c9' };
+          for (let i = 0; i < 4; i++) specs.push({ poly: q(-W / 2 - 4 + i, W / 2 + 4 - i, 6 + (4 - i) * 1.5, 5.8), h: 0.3 + i * 0.28, style: { wall: '#c3beb2', trim: '#d4cfc3', roof: '#cbc6ba', win: WIN.NONE } });
+        }
+        return specs;
+      },
       187436420: (b) => k.archBlock(b, { H: 15, gap: 3.4, spring: 7, st: office(PALE, { win: WIN.NONE }) }), // 애지문
-      187181261: block(5, glass()),                                                  // 백남학술정보관
+      // 백남학술정보관: grey granite block with tall narrow windows between stone piers
+      187181261: block(6, office('#aeaba3', { bay: 2.6, cornice: { h: 0.9, d: 0.4 }, pilaster: { every: 2, w: 0.9, d: 0.4, from: 1 } })),
       187185123: block(3, office('#bdb6a8', { win: WIN.RUBBLE })),                   // 역사관
       605156372: (b) => [{ poly: b.p, h: 0.5, style: office('#bdb8ab', { win: WIN.NONE, plinth: null, parapet: 0 }), roof: { type: 'bowl', h: 5, center: h.centroid(b.p), color: '#b0ab9e' } }], // 노천극장
     }, fallback: k.fallback([() => office(PALE), () => office(TAN), () => office('#cfd0cc', { win: WIN.RIBBON }), () => brick('#a9654f')]) };
@@ -61,8 +78,16 @@ export const seoulCampuses = {
   sogang(h) {
     const k = kit(h), { WIN, office, brick, glass, block } = k, WHITE = '#ecebe5';
     return { landmarks: {
-      // 본관 (1959): white modernist block; the sun-screen grid shades its west side
-      367474952: block(4, office(WHITE, { win: WIN.RIBBON, floorH: 3.9, cornice: { h: 0.7, d: 0.8 }, pilaster: { every: 1, w: 0.26, d: 0.7, from: 4.6 } })),
+      // 본관 (1959): white modernist bar with deep floor slabs; the west wing wears an egg-crate sun screen
+      367474952(b) {
+        const slabs = [0, 1, 2, 3].map(i => ({ y: 4.4 + i * 3.9, h: 0.32, d: 1.1 }));
+        const base = { floorH: 3.9, groundH: 4.6, parapet: 0, cornice: { h: 0.55, d: 1.3 }, bands: slabs, plinth: { h: 1, d: 0.15, col: '#cfc6b2' } };
+        const cut = [187.2, 70], n = [0.99, 0.13];
+        const bar = k.clipHalf(b.p, cut, n), wing = k.clipHalf(b.p, cut, [-n[0], -n[1]]);
+        if (bar.length < 3 || wing.length < 3) return [{ poly: b.p, h: 16.3, style: office(WHITE, { win: WIN.RIBBON, ...base }) }];
+        return [{ poly: bar, h: 16.3, style: office(WHITE, { win: WIN.RIBBON, ...base }) },
+          { poly: wing, h: 16.3, style: office(WHITE, { win: WIN.GRID, bay: 2.1, ...base, pilaster: { every: 1, w: 0.32, d: 1.1, from: 4.6 }, plinth: { h: 4.4, d: 0.2, col: '#cdbf9f' } }) }];
+      },
       367483798: block(12, office(WHITE, { floorH: 3.3 })),                         // 곤자가 국제학사
       367474953: block(4, brick()), 367474954: block(5, brick()), 173883061: block(6, office(WHITE)), // 로욜라 도서관
       9600000001(b) { // 정문: IHS-inspired pillars, a cross on the right one
@@ -77,7 +102,27 @@ export const seoulCampuses = {
   hufs(h) {
     const k = kit(h), { WIN, office, glass, block } = k, STONE = '#c9c4b8';
     return { landmarks: {
-      478064706: block(13, office(STONE, { floorH: 3.6, cornice: { h: 1, d: 0.5 }, pilaster: { every: 3, w: 0.7, d: 0.3, from: 1 } })), // 본관
+      // 본관: three-storey neoclassical base with an eight-column portico, a twelve-storey stone tower
+      // rising behind it to a stepped colonnaded crown
+      478064706(b) {
+        const BEIGE = '#dad1bd';
+        const base = office(BEIGE, { win: WIN.CLASSIC, bay: 3.4, floorH: 4.4, groundH: 5, cornice: { h: 1, d: 0.6 }, parapet: 1.2,
+          pilaster: { every: 2, w: 0.8, d: 0.3, from: 1.2 }, plinth: { h: 1.2, d: 0.25, col: '#b1a993' } });
+        const specs = [{ poly: b.p, h: 14.4, style: base }];
+        const e = h.facingSpan(b.p, 1, 0.07); // the front looks east over the plaza by the main gate
+        if (!e) return specs;
+        const P = k.onEdge(e), m = e.L / 2, q = (a, c, d0, d1) => [P(m + a, d0), P(m + c, d0), P(m + c, d1), P(m + a, d1)];
+        const tower = office('#d3c9b3', { win: WIN.GRID, bay: 2.4, floorH: 3.7, groundH: 5, cornice: { h: 1, d: 0.5 }, parapet: 0, plinth: null,
+          pilaster: { every: 2, w: 0.9, d: 0.45, from: 14.4 } });
+        const T = 5 + 11 * 3.7;
+        specs.push({ poly: q(-12, 12, -16, -38), h: T, style: tower });
+        specs.push({ poly: q(-9, 9, -18.5, -35.5), minY: T, h: 5, style: { ...tower, win: WIN.ARCH, bay: 2.2, floorH: 5, groundH: 5, pilaster: { every: 1, w: 0.6, d: 0.5, from: 0 } } });
+        specs.push({ poly: q(-5.5, 5.5, -21.5, -32.5), minY: T + 5, h: 3.4, style: { ...tower, win: WIN.NONE, pilaster: null, cornice: { h: 0.6, d: 0.4 }, parapet: 0.8 } });
+        const W = 30, c = h.colonnade(specs, { a: P(m - W / 2, 0), L: W, nx: e.nx, nz: e.nz, ux: e.ux, uz: e.uz }, { offset: 5, spacing: 3.8, r: 0.8, h: 13, pad: 1.5, entab: 1.8 });
+        specs[c.entab].roof = { type: 'gable', h: 3.8, axis: [e.nx, e.nz], color: '#cfc7b4' };
+        for (let i = 0; i < 4; i++) specs.push({ poly: q(-W / 2 - 3 + i * 0.6, W / 2 + 3 - i * 0.6, 7 + (4 - i) * 1.4, -0.2), h: 0.25 + i * 0.25, style: { wall: '#c6bfae', trim: '#d6d0c3', roof: '#cdc7b9', win: WIN.NONE } });
+        return specs;
+      },
       416469100: block(6, glass()),                                                 // 도서관
       1188680345: block(16, glass('#7f9fb1', { floorH: 3.5 })),                      // 글로벌홀
       416469098(b) { // 국제관 with the round 애경홀 beside it
@@ -90,12 +135,26 @@ export const seoulCampuses = {
   uos(h) {
     const k = kit(h), { WIN, office, brick, glass, block } = k;
     return { landmarks: {
-      // 경농관 (1937): the oldest building, long and low under a dark roof
-      224704349: (b) => [{ poly: b.p, h: 8.4, style: brick('#a4604c', { floorH: 3.9, groundH: 4.5, cornice: { h: 0.4, d: 0.35 }, parapet: 0 }), roof: { type: 'hip', h: 3.6, color: '#4b4f53' } }],
+      // 경농관 (1937): the oldest building, long and low in red brick under a blue-grey slate roof,
+      // crossed by a gable over its middle porch
+      224704349(b) {
+        const st = brick('#9e5a46', { floorH: 3.9, groundH: 4.5, cornice: { h: 0.4, d: 0.35 }, parapet: 0 }), SLATE = '#56606a';
+        return [{ poly: b.p, h: 8.4, style: st, roof: { type: 'hip', h: 3.6, color: SLATE } },
+          { poly: [[135.6, 37.8], [146.6, 37.7], [146.8, 56.5], [135.8, 56.6]], h: 8.4, style: st, roof: { type: 'gable', h: 4.6, axis: [0, 1], color: SLATE } }];
+      },
       224705102(b) { const st = brick(); const H = k.tall(5, st); return [{ poly: b.p, h: H, style: st }, { poly: k.inset(b.p, 0.96), minY: H, h: 4, style: glass() }]; }, // 대학본부
-      224703878: block(6, brick()), 224705116: block(4, brick()),                    // 중앙도서관, 배봉관
+      // 대강당: red brick hall, a ribbon of glass under the eaves, a dark hipped roof
+      224703877(b) {
+        const red = brick('#9a5142', { floorH: 4.6, groundH: 4.6, parapet: 0, cornice: null });
+        return [{ poly: b.p, h: 9.2, style: red },
+          { poly: b.p, minY: 9.2, h: 2.6, style: glass('#7d9db3', { floorH: 2.6, groundH: 2.6, parapet: 0, cornice: null, plinth: null }) },
+          { poly: b.p, minY: 11.8, h: 2.2, style: { ...red, win: WIN.NONE, plinth: null, cornice: { h: 0.45, d: 0.6 } }, roof: { type: 'hip', h: 3.2, color: '#3e4348' } }];
+      },
+      224703878: block(6, brick('#8e5441', { cornice: { h: 0.9, d: 0.8 }, pilaster: { every: 3, w: 1.6, d: 0.9, from: 0 } })), // 중앙도서관: brown brick, round piers
+      224705116: block(4, brick('#a04b3b', { cornice: { h: 0.8, d: 0.4 } })),       // 배봉관
       224703949: block(6, office('#ab7d4d', { win: WIN.RIBBON })),                    // 건설공학관 (ochre steel panels)
-      224621587: block(7, glass('#8ba5ad')),                                          // 21세기관
+      224621587: block(7, office('#e9e8e2', { win: WIN.RIBBON, cornice: { h: 0.7, d: 0.5 } })), // 21세기관: white, banded
+      224704348: block(4, office('#ecebe5', { cornice: { h: 0.9, d: 0.7 }, pilaster: { every: 1, w: 0.5, d: 0.5, from: 4.6 } })), // 전농관
     }, fallback: k.fallback([() => brick(), () => brick('#99543f'), () => brick('#ad6a53'), () => glass()]) };
   },
 

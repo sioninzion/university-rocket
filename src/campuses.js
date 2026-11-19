@@ -44,7 +44,7 @@ export const CAMPUSES = {
   },
   hanyang: {
     short: '한양대', full: '한양대학교 서울캠퍼스', tag: 'HANYANG SEOUL CAMPUS', style: 'hanyang',
-    hero: { id: 187185124, name: '본관', view: [-0.9, -0.43] },
+    hero: { id: 187185124, name: '본관', view: [-0.31, 0.95] },
     data: 'data/hanyang.json', pad: [34, 17], launchTarget: [222, 107],
     outerChunkScale: 2.2, liteOuter: true, treeClear: [[34, 17, 20]],
   },
