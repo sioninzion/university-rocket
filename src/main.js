@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=77';
-import { City, pip } from './buildings.js?v=77';
-import { buildStructures } from './models.js?v=77';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=77';
-import { Particles, Debris } from './fx.js?v=77';
-import { Input } from './input.js?v=77';
-import { Sfx } from './audio.js?v=77';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=77';
-import { initStats, countDestroyed, countPlayer } from './stats.js?v=77';
+import { NIGHT } from './facade.js?v=78';
+import { City, pip } from './buildings.js?v=78';
+import { buildStructures } from './models.js?v=78';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=78';
+import { Particles, Debris } from './fx.js?v=78';
+import { Input } from './input.js?v=78';
+import { Sfx } from './audio.js?v=78';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=78';
+import { initStats, countDestroyed, countPlayer } from './stats.js?v=78';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -56,7 +56,7 @@ async function main(opts = {}) {
   setupCampusUi();
   initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=77`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=78`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -1644,7 +1644,7 @@ async function main(opts = {}) {
   $('optClose').addEventListener('click', () => openSettings(false));
   $('settings').addEventListener('click', (e) => { if (e.target === $('settings')) openSettings(false); });
   addEventListener('keydown', (e) => { if (e.code === 'Escape') openSettings(!S.paused); });
-  $('optReset').addEventListener('click', () => { if (confirm('캠퍼스를 복구할까요? (점수 초기화)')) location.reload(); });
+  $('optExit').addEventListener('click', exitToTitle); // back to this campus's start screen
   updateHud();
   setLoad(`건물 ${city.structures.length}채 · 조각 ${city.totalChunks.toLocaleString()}개 준비 완료`);
   const start = $('start');
@@ -1676,7 +1676,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=77');
+    const { runPicker } = await import('./picker.js?v=78');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long

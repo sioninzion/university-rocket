@@ -200,3 +200,18 @@ export function openPicker() {
   u.searchParams.set('pick', '1');
   location.href = u.href;
 }
+
+// leave the picker for the start screen of the campus played last (remembered by selectedCampusId)
+export function backToCampus() {
+  const u = new URL(location.href);
+  u.searchParams.delete('pick');
+  u.searchParams.set('campus', selectedCampusId());
+  location.href = u.href;
+}
+
+// leave a game for this campus's start screen
+export function exitToTitle() {
+  const u = new URL(location.href);
+  u.searchParams.delete('pick');
+  location.href = u.href;
+}

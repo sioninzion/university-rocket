@@ -188,9 +188,11 @@
   #pickGo { pointer-events: auto; min-width: 220px; padding: 14px 28px; border: 0; cursor: pointer; color: #1e1f1c; font: 21px/1 var(--display); letter-spacing: 1px; background: linear-gradient(180deg, #ffd766, #f0a92e); }
   .pickArrow { position: absolute; top: 50%; width: 46px; height: 64px; margin-top: -32px; border: 0; cursor: pointer; color: #fff; font: 30px/1 var(--display); background: rgba(10,16,28,.42); }
   #pickPrev { left: calc(var(--safe-l) + 8px); } #pickNext { right: calc(var(--safe-r) + 8px); }
+  #pickBack { position: absolute; z-index: 2; left: calc(var(--safe-l) + 10px); top: calc(var(--safe-t) + 10px); min-height: 38px; padding: 0 14px;
+    border: 1px solid rgba(255,255,255,.35); border-radius: 3px; cursor: pointer; color: #fff; font: 15px/1 var(--display); letter-spacing: .5px; background: rgba(10,16,28,.42); }
   .pickArrow:disabled { opacity: .22; cursor: default; }
   #pickMsg { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 14px; }
-  #picker.firing #pickHead, #picker.firing #pickFoot, #picker.firing .pickArrow { opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #picker.firing #pickHead, #picker.firing #pickFoot, #picker.firing .pickArrow, #picker.firing #pickBack { opacity: 0; pointer-events: none; transition: opacity .2s; }
   #picker:not(.ready) #pickFoot, #picker:not(.ready) .pickArrow { visibility: hidden; }
   @media (max-height: 430px) { #pickHead { top: calc(var(--safe-t) + 8px); } #pickName { font-size: 32px; } #pickHead small { display: none; } #pickFoot { flex-direction: row; justify-content: center; gap: 14px; bottom: calc(var(--safe-b) + 10px); } #pickGo { min-width: 180px; padding: 11px 20px; font-size: 18px; } }
   #start { margin-top: 20px; padding: 15px 48px; border: 0; cursor: pointer; font: 24px/1 var(--display); letter-spacing: 2px; color: #1e1f1c;
@@ -284,7 +286,7 @@
     <label class="opt"><span>상하 반전<small>조이스틱을 위로 밀면 기수가 내려가요</small></span><span class="sw"><input type="checkbox" id="optInvert"><i></i></span></label>
     <div class="opt"><span>학교<small>바꾸면 처음부터 다시 불러와요</small></span><button class="pickBtn" type="button">대학교 선택하기</button></div>
     <div class="sbtns">
-      <button class="gbtn sec" id="optReset">캠퍼스 복구</button>
+      <button class="gbtn sec" id="optExit">나가기</button>
       <button class="gbtn pri" id="optClose">계속하기</button>
     </div>
   </div>
@@ -305,6 +307,7 @@
 <div id="picker" role="dialog" aria-label="대학교 선택">
   <canvas id="pickCanvas"></canvas>
   <div id="pickSwipe" aria-hidden="true"></div>
+  <button id="pickBack" type="button" aria-label="이전에 플레이한 학교로 돌아가기">‹ 돌아가기</button>
   <div id="pickHead"><small>대학교 선택</small><strong id="pickName">&nbsp;</strong><span id="pickFull"></span></div>
   <div id="pickMsg" role="status">대표 건물 불러오는 중…</div>
   <button class="pickArrow" id="pickPrev" type="button" aria-label="이전 대학교">‹</button>
@@ -314,6 +317,6 @@
 
 <div id="fadeBlack"><span id="fadeMsg" role="status"></span></div>
 
-<script type="module" src="src/main.js?v=77"></script>
+<script type="module" src="src/main.js?v=78"></script>
 </body>
 </html>
