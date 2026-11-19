@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=69';
-import { City } from './buildings.js?v=69';
-import { buildStructures } from './models.js?v=69';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=69';
-import { Particles, Debris } from './fx.js?v=69';
-import { Input } from './input.js?v=69';
-import { Sfx } from './audio.js?v=69';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=69';
+import { NIGHT } from './facade.js?v=70';
+import { City } from './buildings.js?v=70';
+import { buildStructures } from './models.js?v=70';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=70';
+import { Particles, Debris } from './fx.js?v=70';
+import { Input } from './input.js?v=70';
+import { Sfx } from './audio.js?v=70';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=70';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -54,7 +54,7 @@ function enterFullscreen() {
 async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=69`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=70`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -526,8 +526,8 @@ async function main(opts = {}) {
     if (S.weapon === 'airstrike') { startLaser(p); S.boomTime = 5.2; S.boomScale = 1.8; }
     if (S.weapon === 'blackhole') { startBlackHole(p); S.boomTime = BH_TIME + 1.4; S.boomScale = 2.3; }
     if (S.weapon === 'quake') {
-      // plain impact: 100 m; drill dive: 0.4x the height it fell
-      const qr = S.drill ? Math.max(20, 0.4 * (S.drillY0 - p.y)) : 100;
+      // plain impact: 100 m; drill dive: 0.25x the height it fell
+      const qr = S.drill ? Math.max(20, 0.25 * (S.drillY0 - p.y)) : 100;
       startQuake(p, qr); S.boomTime = QUAKE_TIME + 2.5; S.boomScale = 4.2; }
     if (downMsg) toast(downMsg, true);
     S.mode = 'boom'; S.t = 0; S.boomPos.copy(p);
@@ -1622,7 +1622,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=69');
+    const { runPicker } = await import('./picker.js?v=70');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
