@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=71';
-import { City } from './buildings.js?v=71';
-import { buildStructures } from './models.js?v=71';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=71';
-import { Particles, Debris } from './fx.js?v=71';
-import { Input } from './input.js?v=71';
-import { Sfx } from './audio.js?v=71';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=71';
+import { NIGHT } from './facade.js?v=72';
+import { City } from './buildings.js?v=72';
+import { buildStructures } from './models.js?v=72';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=72';
+import { Particles, Debris } from './fx.js?v=72';
+import { Input } from './input.js?v=72';
+import { Sfx } from './audio.js?v=72';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=72';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -54,7 +54,7 @@ function enterFullscreen() {
 async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=71`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=72`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -1622,7 +1622,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=71');
+    const { runPicker } = await import('./picker.js?v=72');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
