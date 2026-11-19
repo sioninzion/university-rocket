@@ -1,5 +1,5 @@
 // Shared play statistics: players today / in total and buildings brought down today / in total.
-// Counters live in Upstash Redis (connected through the Vercel Marketplace).
+// Counters live in Upstash Redis "univ-stats" (Tokyo, connected through the Vercel Marketplace).
 //   GET  /api/stats                         -> current numbers
 //   POST /api/stats {"id": "<uuid>"}        -> count this browser's visit (once a day), returns numbers
 //   POST /api/stats {"destroyed": n}        -> add buildings brought down since the last report (max 500 per call)
