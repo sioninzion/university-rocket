@@ -284,20 +284,43 @@ def area(r):
     return sum(r[i][0] * r[(i + 1) % len(r)][1] - r[(i + 1) % len(r)][0] * r[i][1] for i in range(len(r))) / 2
 
 
+def stitch(lines):
+    # a multipolygon ring may be split over several ways: join them end to end into closed rings
+    key = lambda p: (round(p["lat"], 7), round(p["lon"], 7))
+    rings, open_ = [], []
+    for g in lines:
+        g = [p for p in g if p]
+        if len(g) < 2:
+            continue
+        (rings if key(g[0]) == key(g[-1]) else open_).append(list(g))
+    while open_:
+        cur = open_.pop(0)
+        grown = True
+        while key(cur[0]) != key(cur[-1]) and grown:
+            grown = False
+            for i, g in enumerate(open_):
+                if key(g[0]) == key(cur[-1]): cur += g[1:]
+                elif key(g[-1]) == key(cur[-1]): cur += g[::-1][1:]
+                elif key(g[-1]) == key(cur[0]): cur = g[:-1] + cur
+                elif key(g[0]) == key(cur[0]): cur = g[::-1][:-1] + cur
+                else: continue
+                open_.pop(i); grown = True
+                break
+        if len(cur) >= 3:
+            rings.append(cur)  # an unclosable chain is closed straight back to its start
+    return rings
+
+
 def outer_rings(e):
     if e["type"] == "way":
         return [ring(e["geometry"])]
-    rings = []
-    for m in e.get("members", []):
-        if m.get("role") == "outer" and m.get("geometry"):
-            rings.append(ring(m["geometry"]))
-    return rings
+    return [ring(g) for g in stitch([m["geometry"] for m in e.get("members", []) if m.get("role") == "outer" and m.get("geometry")])]
 
 
 def inner_rings(e):
     if e["type"] != "relation":
         return []
-    return [ring(m["geometry"]) for m in e.get("members", []) if m.get("role") == "inner" and m.get("geometry")]
+    return [ring(g) for g in stitch([m["geometry"] for m in e.get("members", []) if m.get("role") == "inner" and m.get("geometry")])]
 
 
 def hash01(s):
