@@ -198,6 +198,8 @@
     clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
   #start:disabled { opacity: .5; }
   #loadMsg { margin-top: 12px; font-size: 12px; opacity: .7; }
+  #globalStats { margin-top: 6px; min-height: 14px; font-size: 10.5px; letter-spacing: .2px; opacity: 0; transition: opacity .4s; }
+  #globalStats.on { opacity: .6; }
 
   /* ---------- small / portrait screens */
   @media (max-width: 720px) and (min-aspect-ratio: 1/1) { #flight { display: none !important; } }
@@ -296,6 +298,7 @@
     <button class="pickBtn" type="button">대학교 선택하기</button>
     <button id="start" disabled>불러오는 중…</button>
     <div id="loadMsg">준비 중…</div>
+    <div id="globalStats" aria-live="polite"></div>
   </div>
 </div>
 
@@ -311,6 +314,6 @@
 
 <div id="fadeBlack"><span id="fadeMsg" role="status"></span></div>
 
-<script type="module" src="src/main.js?v=74"></script>
+<script type="module" src="src/main.js?v=75"></script>
 </body>
 </html>

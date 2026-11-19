@@ -1,12 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=74';
-import { City, pip } from './buildings.js?v=74';
-import { buildStructures } from './models.js?v=74';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=74';
-import { Particles, Debris } from './fx.js?v=74';
-import { Input } from './input.js?v=74';
-import { Sfx } from './audio.js?v=74';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=74';
+import { NIGHT } from './facade.js?v=75';
+import { City, pip } from './buildings.js?v=75';
+import { buildStructures } from './models.js?v=75';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=75';
+import { Particles, Debris } from './fx.js?v=75';
+import { Input } from './input.js?v=75';
+import { Sfx } from './audio.js?v=75';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=75';
+import { initStats, countDestroyed } from './stats.js?v=75';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -53,8 +54,9 @@ function enterFullscreen() {
 // opts (coming from the picker): auto = start flying as soon as the campus is built
 async function main(opts = {}) {
   setupCampusUi();
+  initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=74`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=75`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -507,7 +509,7 @@ async function main(opts = {}) {
     let downMsg = null;
     for (const s of new Set(res.map(r => r.b.owner))) {
       const alive = s.parts.reduce((t, q) => t + q.aliveCount, 0);
-      if (!downSet.has(s) && alive / s.total < 0.15) { downSet.add(s); S.down++; downMsg = `${s.name || KIND[s.kind] || '건물'} 붕괴!`; }
+      if (!downSet.has(s) && alive / s.total < 0.15) { downSet.add(s); S.down++; countDestroyed(1); downMsg = `${s.name || KIND[s.kind] || '건물'} 붕괴!`; }
     }
     checkUnlocks();
     updateHud();
@@ -1673,7 +1675,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=74');
+    const { runPicker } = await import('./picker.js?v=75');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
