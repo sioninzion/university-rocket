@@ -1,6 +1,6 @@
 // Terrain, ground map texture, surrounding hills, trees and sky.
 import * as THREE from 'three';
-import { pip, makeRng } from './buildings.js?v=72';
+import { pip, makeRng } from './buildings.js?v=73';
 
 export class Terrain {
   constructor(t) {

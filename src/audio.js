@@ -38,6 +38,22 @@ export class Sfx {
     og.gain.setValueAtTime(0.9 * strength, t); og.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
     o.connect(og).connect(this.master); o.start(t); o.stop(t + 1.2);
   }
+  // a rocket hitting water: hissing spray over a low plunk
+  splash(strength = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.7;
+    f.frequency.setValueAtTime(3200, t); f.frequency.exponentialRampToValueAtTime(700, t + 1.1);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.7 * strength, t + 0.03); g.gain.exponentialRampToValueAtTime(0.001, t + 1.3);
+    src.connect(f).connect(g).connect(this.master); src.start(t); src.stop(t + 1.4);
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(60, t + 0.35);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.5 * strength, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    o.connect(og).connect(this.master); o.start(t); o.stop(t + 0.5);
+  }
   rumble() {
     if (!this.ctx) return;
     const ctx = this.ctx, t = ctx.currentTime;

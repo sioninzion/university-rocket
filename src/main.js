@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=72';
-import { City } from './buildings.js?v=72';
-import { buildStructures } from './models.js?v=72';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=72';
-import { Particles, Debris } from './fx.js?v=72';
-import { Input } from './input.js?v=72';
-import { Sfx } from './audio.js?v=72';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=72';
+import { NIGHT } from './facade.js?v=73';
+import { City, pip } from './buildings.js?v=73';
+import { buildStructures } from './models.js?v=73';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=73';
+import { Particles, Debris } from './fx.js?v=73';
+import { Input } from './input.js?v=73';
+import { Sfx } from './audio.js?v=73';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=73';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -54,7 +54,7 @@ function enterFullscreen() {
 async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=72`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=73`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -774,6 +774,56 @@ async function main(opts = {}) {
     }
   }
 
+  // ------------------------------------------------------------ water: a rocket that comes down on a lake or river
+  // does not go off; it throws up a splash, tips over and sinks out of sight
+  const waters = data.areas.filter(a => a.k === 'water').map(a => {
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const [x, z] of a.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    return { p: a.p, x0, z0, x1, z1 };
+  });
+  const islands = data.areas.filter(a => a.island).map(a => a.p);
+  const inWater = (x, z) => waters.some(w => x >= w.x0 && x <= w.x1 && z >= w.z0 && z <= w.z1 && pip(w.p, x, z)) && !islands.some(q => pip(q, x, z));
+  const SINK_TIME = 3.2;
+  const ripple = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 6, 64), addMat(0xe6f3ff));
+  ripple.rotation.x = Math.PI / 2; ripple.visible = false; scene.add(ripple);
+  const sink = { dir: new THREE.Vector3(), v: 0, gy: 0, pitch0: 0 };
+  function splash() {
+    const p = S.pos, gy = terrain.height(p.x, p.z), hit = clamp(S.speed / 90, 0.35, 1.2);
+    sink.dir.set(fwd.x, 0, fwd.z).normalize(); sink.v = Math.min(S.speed, 60) * 0.25; sink.gy = gy; sink.pitch0 = S.pitch;
+    p.y = gy + 0.2;
+    // a crown of spray and a white column, then droplets falling back
+    for (let i = 0; i < 110; i++) {
+      const a = Math.random() * Math.PI * 2, out = 3 + Math.random() * 8 * hit, up = 7 + Math.random() * 15 * hit;
+      smoke.spawn(p.x + Math.cos(a) * 1.2, gy + 0.3, p.z + Math.sin(a) * 1.2, Math.cos(a) * out, up, Math.sin(a) * out,
+        0.9 + Math.random() * 0.9, 1.6, 1.3 + Math.random() * 0.7, 0.9, 0.95, 1, 0.95, 0.985, -20);
+    }
+    for (let i = 0; i < 30; i++) smoke.spawn(p.x + (Math.random() - 0.5) * 1.6, gy + 0.5, p.z + (Math.random() - 0.5) * 1.6,
+      (Math.random() - 0.5) * 2.5, 10 + Math.random() * 12 * hit, (Math.random() - 0.5) * 2.5, 2.2, 3.5, 1.6, 0.96, 0.98, 1, 0.9, 0.97, -12);
+    for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; // low skirt of spray rolling out over the surface
+      smoke.spawn(p.x + Math.cos(a) * 2, gy + 0.4, p.z + Math.sin(a) * 2, Math.cos(a) * 9 * hit, 1.5, Math.sin(a) * 9 * hit, 1.8, 3, 1.2, 0.93, 0.97, 1, 0.75, 0.93, -2); }
+    ripple.position.set(p.x, gy + 0.08, p.z); ripple.scale.set(1, 1, 1); ripple.material.opacity = 0.9; ripple.visible = true;
+    S.mode = 'sink'; S.t = 0; S.speed = 0; S.boosting = false; S.boomPos.set(p.x, gy, p.z); S.boomScale = 0.6; S.boomTime = SINK_TIME;
+    S.orbit = Math.atan2(camera.position.x - p.x, camera.position.z - p.z);
+    setFlames(false); sfx.engine(false); sfx.splash(hit);
+    S.shots++;
+    toast('풍덩! 물에 빠졌어요');
+    updateHud();
+  }
+  function updateSink(dt) {
+    const t = S.t, p = S.pos;
+    sink.v *= Math.exp(-dt * 3);                       // water drags the glide to a stop
+    p.addScaledVector(sink.dir, sink.v * dt);
+    p.y = sink.gy + 0.2 - Math.min(t * t * 1.6, 9);    // slips under, faster and faster
+    S.pitch = sink.pitch0 + (-1.25 - sink.pitch0) * Math.min(1, t * 1.6); // nose tips down
+    S.roll = Math.sin(t * 5) * 0.25 * Math.exp(-t);
+    // ripple spreading out, bubbles rising where it went down
+    const r = 1 + t * 7;
+    ripple.scale.set(r, r, 1); ripple.material.opacity = Math.max(0, 0.9 * (1 - t / SINK_TIME));
+    if (t < 2.4 && Math.random() < 0.6) smoke.spawn(p.x + (Math.random() - 0.5) * 2, sink.gy + 0.15, p.z + (Math.random() - 0.5) * 2,
+      0, 0.8, 0, 0.25 + Math.random() * 0.3, 0.6, 0.7, 0.92, 0.97, 1, 0.8, 0.9, 0);
+    if (t > S.boomTime) { ripple.visible = false; resetRocket(); }
+  }
+
   // ------------------------------------------------------------ earthquake: a ground wave knocks out ground floors,
   // so every building it passes loses its footing and collapses on itself
   const QUAKE_R = 210, QUAKE_TIME = 3.4;
@@ -1315,7 +1365,7 @@ async function main(opts = {}) {
         S.pos.addScaledVector(fwd, dist / steps);
         const h = city.hit(S.pos.x, S.pos.y, S.pos.z);
         if (h) { explode(h.b); break; }
-        if (S.pos.y < terrain.height(S.pos.x, S.pos.z) + 0.3) { explode(null); break; }
+        if (S.pos.y < terrain.height(S.pos.x, S.pos.z) + 0.3) { if (inWater(S.pos.x, S.pos.z)) splash(); else explode(null); break; }
         if (!terrain.inside(S.pos.x, S.pos.z, 15) || S.pos.y > 1200 || S.t > 60) { S.outOfBounds = true; explode(null); break; }
       }
       if (S.mode === 'flight') {
@@ -1344,6 +1394,8 @@ async function main(opts = {}) {
       if (!bombs.some(b => b.kind === 'sub')) endCluster(); // submunitions live until they hit something
     } else if (S.mode === 'boom') {
       if (S.t > (S.boomTime || 3.4) && !laser.on && !bh.on && !quake.on) resetRocket();
+    } else if (S.mode === 'sink') {
+      updateSink(dt);
     }
 
     rocket.position.copy(S.pos);
@@ -1417,7 +1469,7 @@ async function main(opts = {}) {
       camLook.lerp(c, 1 - Math.exp(-dt * 6));
     } else if (S.mode === 'debug') {
       // camera placed by window.__game.look() for testing
-    } else if (S.mode === 'boom') {
+    } else if (S.mode === 'boom' || S.mode === 'sink') {
       S.orbit += dt * 0.35;
       const sc = S.boomScale || 1;
       const dist = (42 + S.t * 4) * sc;
@@ -1622,7 +1674,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=72');
+    const { runPicker } = await import('./picker.js?v=73');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long

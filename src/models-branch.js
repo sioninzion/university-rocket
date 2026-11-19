@@ -1,6 +1,6 @@
 // Branch campuses of the universities already in the game (경희대 서울, 연세대 송도 ...).
 // Landmarks are modelled from photos where Commons has them; otherwise each campus only gets its palette.
-import { kit } from './models-seoul.js?v=72';
+import { kit } from './models-seoul.js?v=73';
 
 export const branchCampuses = {
   // 경희대학교 서울캠퍼스: grey granite gothic 평화의전당, white neoclassical 본관
