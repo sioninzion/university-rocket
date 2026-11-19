@@ -1,6 +1,6 @@
 // 국민대·숭실대·세종대·단국대(죽전): landmarks modelled from photos, keyed by OSM id,
 // plus each campus's palette for the buildings without a hand-made model.
-import { kit } from './models-seoul.js?v=92';
+import { kit } from './models-seoul.js?v=93';
 
 export const kssdCampuses = {
   kookmin(h) {
