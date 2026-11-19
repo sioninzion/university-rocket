@@ -158,6 +158,7 @@
     background: radial-gradient(ellipse at center, rgba(13,20,32,.35), rgba(5,8,14,.92)); transition: opacity .4s; }
   #title.hide { opacity: 0; pointer-events: none; }
   #title .tag { font-size: 12px; letter-spacing: 6px; opacity: .7; }
+  @media (max-width: 480px) { #title .tag { font-size: 10px; letter-spacing: 1.6px; white-space: nowrap; } }
   #title h1 { margin: 6px 0 8px; font: clamp(44px, 10vw, 76px)/1 var(--display); letter-spacing: 1px; color: #fff;
     -webkit-text-stroke: 2px rgba(0,0,0,.35); text-shadow: 0 6px 0 rgba(0,0,0,.4), 0 0 30px rgba(255,90,60,.35); }
   #title h1 span { color: var(--gold); }
@@ -318,6 +319,6 @@
 
 <div id="fadeBlack"><span id="fadeMsg" role="status"></span></div>
 
-<script type="module" src="src/main.js?v=80"></script>
+<script type="module" src="src/main.js?v=81"></script>
 </body>
 </html>
