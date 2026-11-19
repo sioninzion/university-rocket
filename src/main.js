@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=68';
-import { City } from './buildings.js?v=68';
-import { buildStructures } from './models.js?v=68';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=68';
-import { Particles, Debris } from './fx.js?v=68';
-import { Input } from './input.js?v=68';
-import { Sfx } from './audio.js?v=68';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=68';
+import { NIGHT } from './facade.js?v=69';
+import { City } from './buildings.js?v=69';
+import { buildStructures } from './models.js?v=69';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=69';
+import { Particles, Debris } from './fx.js?v=69';
+import { Input } from './input.js?v=69';
+import { Sfx } from './audio.js?v=69';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker } from './campuses.js?v=69';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -54,7 +54,7 @@ function enterFullscreen() {
 async function main(opts = {}) {
   setupCampusUi();
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=68`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=69`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -526,8 +526,8 @@ async function main(opts = {}) {
     if (S.weapon === 'airstrike') { startLaser(p); S.boomTime = 5.2; S.boomScale = 1.8; }
     if (S.weapon === 'blackhole') { startBlackHole(p); S.boomTime = BH_TIME + 1.4; S.boomScale = 2.3; }
     if (S.weapon === 'quake') {
-      // plain impact: 100 m; drill dive: 0.7x the height it fell
-      const qr = S.drill ? Math.max(20, 0.7 * (S.drillY0 - p.y)) : 100;
+      // plain impact: 100 m; drill dive: 0.4x the height it fell
+      const qr = S.drill ? Math.max(20, 0.4 * (S.drillY0 - p.y)) : 100;
       startQuake(p, qr); S.boomTime = QUAKE_TIME + 2.5; S.boomScale = 4.2; }
     if (downMsg) toast(downMsg, true);
     S.mode = 'boom'; S.t = 0; S.boomPos.copy(p);
@@ -1255,7 +1255,9 @@ async function main(opts = {}) {
         // drill dive: nose straight down, spinning, accelerating into the ground
         S.pitch += (-1.52 - S.pitch) * Math.min(1, dt * 5);
         S.roll += dt * 16;
-        S.speed += (160 - S.speed) * Math.min(1, dt * 3);
+        S.drillT += dt;
+        S.speed += (60 + S.drillT * 45) * dt; // keeps speeding up all the way down
+        S.roll += dt * Math.min(S.speed / 40, 10); // the drill spins faster as it falls
         S.boosting = true;
         computeFwd();
       } else {
@@ -1283,7 +1285,7 @@ async function main(opts = {}) {
           S.fuel = clamp(S.fuel + (S.firing ? -0.17 : 0.12 * 1.8) * dt, 0, 1); // half the drain, 1.8x recharge
         } else if (S.weapon === 'quake') {
           S.boosting = false;
-          if (skillPress && S.t > 0.3) { S.drill = true; S.drillY0 = S.pos.y; sfx.boom(0.3); }
+          if (skillPress && S.t > 0.3) { S.drill = true; S.drillY0 = S.pos.y; S.drillT = 0; sfx.boom(0.3); }
         } else if (S.weapon === 'blackhole') {
           S.boosting = false;
           if (skillPress && S.t > 0.3) { explode(null); }
@@ -1620,7 +1622,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=68');
+    const { runPicker } = await import('./picker.js?v=69');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
