@@ -38,6 +38,21 @@ export class Sfx {
     og.gain.setValueAtTime(0.9 * strength, t); og.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
     o.connect(og).connect(this.master); o.start(t); o.stop(t + 1.2);
   }
+  // campus picker: a soft whoosh as the next campus slides in, with a light tick
+  swish() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+    f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(2600, t + 0.16);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.035); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    src.connect(f).connect(g).connect(this.master); src.start(t, Math.random()); src.stop(t + 0.25);
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(1500, t + 0.05);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t); og.gain.setValueAtTime(0.06, t + 0.05); og.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    o.connect(og).connect(this.master); o.start(t); o.stop(t + 0.12);
+  }
   // a rocket hitting water: hissing spray over a low plunk
   splash(strength = 1) {
     if (!this.ctx) return;

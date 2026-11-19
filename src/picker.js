@@ -2,12 +2,12 @@
 // order. Swipe to browse; choosing one fires a rocket at it, then the screen fades to black and
 // the game starts. It runs in its own light scene, torn down before the campus itself is built.
 import * as THREE from 'three';
-import { City, makeRng } from './buildings.js?v=79';
-import { buildStructures } from './models.js?v=79';
-import { buildSky } from './world.js?v=79';
-import { Particles, Debris } from './fx.js?v=79';
-import { Sfx } from './audio.js?v=79';
-import { CAMPUSES, selectedCampusId, backToCampus } from './campuses.js?v=79';
+import { City, makeRng } from './buildings.js?v=80';
+import { buildStructures } from './models.js?v=80';
+import { buildSky } from './world.js?v=80';
+import { Particles, Debris } from './fx.js?v=80';
+import { Sfx } from './audio.js?v=80';
+import { CAMPUSES, selectedCampusId, backToCampus } from './campuses.js?v=80';
 
 const SPACING = 320, FLIGHT = 1.05;
 const FADE_DELAY = 0.9, FADE_TIME = 0.5; // seconds after the blast
@@ -40,7 +40,7 @@ export async function runPicker({ enterFullscreen }) {
   const box = $('picker'), msg = $('pickMsg'), btn = $('pickGo'), black = $('fadeBlack');
   box.classList.add('open');
   $('pickBack').onclick = backToCampus; // works while the heroes are still loading
-  const heroes = await (await fetch('data/heroes.json?v=79')).json();
+  const heroes = await (await fetch('data/heroes.json?v=80')).json();
   await new Promise((r) => { requestAnimationFrame(r); setTimeout(r, 60); });
 
   // ------------------------------------------------------------ scene
@@ -101,8 +101,15 @@ export async function runPicker({ enterFullscreen }) {
   const dots = $('pickDots');
   entries.forEach((_, i) => { const d = document.createElement('i'); d.dataset.i = i; dots.append(d); });
 
+  // sound may only start after the player touches the screen or presses a key
+  const wake = () => sfx.init();
+  let lastSwish = 0;
+  box.addEventListener('pointerdown', wake); addEventListener('keydown', wake);
+
   function show(i) {
     if (i === S.shown) return;
+    const now = performance.now(); // not for the first campus on screen; a fast swipe across many gives a quick run of ticks
+    if (S.shown !== -1 && now - lastSwish > 70) { lastSwish = now; sfx.swish(); }
     S.shown = i;
     const { c } = list[i];
     $('pickName').textContent = c.short;
@@ -147,7 +154,7 @@ export async function runPicker({ enterFullscreen }) {
     box.classList.add('firing');
     sfx.init(); sfx.engine(true, true);
     enterFullscreen();
-    dataP = fetch(`${hero.c.data}?v=79`).then(r => r.json()); // start downloading the campus during the show
+    dataP = fetch(`${hero.c.data}?v=80`).then(r => r.json()); // start downloading the campus during the show
     dataP.catch(() => {});
     const stub = { height: () => hero.base };
     fx = { fire: new Particles(hero.inner, 900, true), smoke: new Particles(hero.inner, 900, false), debris: new Debris(hero.inner, 700, stub), flash: new THREE.PointLight(0xffa955, 0, 240, 1.2) };
@@ -245,12 +252,12 @@ export async function runPicker({ enterFullscreen }) {
   let last = performance.now(), running = true;
   const tick = (now) => { if (!running) return; requestAnimationFrame(tick); const dt = Math.min((now - last) / 1000, 0.05); last = now; resize(); step(dt); };
   requestAnimationFrame(tick);
-  window.__picker = { S, list, go, choose, step, camera };
+  window.__picker = { S, list, go, choose, step, camera, sfx };
   msg.textContent = '';
 
   await finished;
   running = false;
-  removeEventListener('keydown', onKey);
+  removeEventListener('keydown', onKey); removeEventListener('keydown', wake);
   const id = hero.id, data = dataP;
   delete window.__picker;
   box.classList.remove('open', 'ready', 'firing');
