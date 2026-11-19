@@ -1,6 +1,6 @@
 // Branch campuses of the universities already in the game (경희대 서울, 연세대 송도 ...).
 // Landmarks are modelled from photos where Commons has them; otherwise each campus only gets its palette.
-import { kit } from './models-seoul.js?v=81';
+import { kit } from './models-seoul.js?v=85';
 
 export const branchCampuses = {
   // 경희대학교 서울캠퍼스: grey granite gothic 평화의전당, white neoclassical 본관
@@ -41,10 +41,33 @@ export const branchCampuses = {
   skkun(h) {
     const k = kit(h), { WIN, office, brick, glass, tall } = k;
     return { landmarks: {
-      // 삼성학술정보관: the oval library at the head of 글로벌 광장, under a low silver dome
+      // 삼성학술정보관: five blue-glass pods side by side, stepping down from a tall middle one, each under a thick
+      // silver shell roof that overhangs and arches across; a thin canopy on round columns shelters the south front
       3571072(b) {
-        const st = office('#cfd1d2', { win: WIN.RIBBON, cornice: { h: 0.8, d: 0.6 }, parapet: 0.6 });
-        return [{ poly: b.p, h: tall(5, st), style: st, roof: { type: 'dome', h: 7, color: '#c3c9cd' } }];
+        let x0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+        for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z1 = Math.max(z1, z); }
+        const W = x1 - x0, X = (f) => x0 + W * f;
+        const strip = (f0, f1) => h.clipHalf(h.clipHalf(b.p, [X(f0), 0], [1, 0]), [X(f1), 0], [-1, 0]);
+        // deep blue tinted glass: a plain blue skin with pale floor bands and slim mullions (reflective windows would read as grey)
+        const glassWall = { wall: '#3d679f', trim: '#b7c1ca', roof: '#c3c9ce', win: WIN.NONE, bay: 2.4, floorH: 4.2, groundH: 5,
+          bands: [5, 9.2, 13.4, 17.6, 21.8, 26, 30].map((y) => ({ y, h: 0.35, d: 0.12 })), pilaster: { every: 1, w: 0.14, d: 0.06, from: 0 },
+          plinth: { h: 0.6, d: 0.1, col: '#8e969c' } };
+        const SILVER = { wall: '#d4d9dd', trim: '#8f979e', roof: '#cdd2d6', win: WIN.NONE };
+        const specs = [];
+        // [from, to, wall height, roof arch]: outer pods lowest, the middle one tallest (heights read off the front photo)
+        for (const [f0, f1, H, arch] of [[0, 0.15, 17, 2], [0.85, 1, 17, 2], [0.15, 0.29, 23, 2.4], [0.71, 0.85, 23, 2.4], [0.29, 0.71, 30, 3.2]]) {
+          const p = strip(f0, f1);
+          if (p.length < 3) continue;
+          const i = specs.length;
+          specs.push({ poly: p, h: H, style: glassWall });
+          specs.push({ poly: k.inset(p, 1.12), minY: H, h: 2, supports: [i], supportSpan: 40, style: SILVER, // thick shell edge
+            roof: { type: 'vault', h: arch, axis: [0, 1], color: '#cdd2d6' } });
+        }
+        // front canopy: a thin silver slab on round columns along the middle of the south side
+        const cols = [];
+        for (let f = 0.22; f <= 0.781; f += 0.08) { cols.push(specs.length); specs.push({ poly: h.circle(X(f), z1 + 4.5, 0.55, 10), h: 7.6, style: { wall: '#9aa2a8', trim: '#b4bbc0', win: WIN.NONE } }); }
+        specs.push({ poly: [[X(0.18), z1 - 2], [X(0.82), z1 - 2], [X(0.82), z1 + 6], [X(0.18), z1 + 6]], minY: 7.6, h: 0.6, supports: cols, supportSpan: 14, style: SILVER });
+        return specs;
       },
     }, fallback: k.fallback([() => office('#d9d7d1'), () => office('#c4c2bb', { win: WIN.RIBBON }), () => brick('#9c5a46'), () => glass('#7f9fb0')]) };
   },
