@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=90';
-import { City, pip } from './buildings.js?v=90';
-import { buildStructures } from './models.js?v=90';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=90';
-import { Particles, Debris } from './fx.js?v=90';
-import { Input } from './input.js?v=90';
-import { Sfx } from './audio.js?v=90';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=90';
-import { initStats, countDestroyed, countPlayer } from './stats.js?v=90';
+import { NIGHT } from './facade.js?v=91';
+import { City, pip } from './buildings.js?v=91';
+import { buildStructures } from './models.js?v=91';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=91';
+import { Particles, Debris } from './fx.js?v=91';
+import { Input } from './input.js?v=91';
+import { Sfx } from './audio.js?v=91';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=91';
+import { initStats, countDestroyed, countPlayer } from './stats.js?v=91';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -56,7 +56,7 @@ async function main(opts = {}) {
   setupCampusUi();
   initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=90`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=91`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -531,7 +531,9 @@ async function main(opts = {}) {
       // plain impact: 100 m; drill dive: 0.25x the height it fell
       const qr = S.drill ? Math.max(20, 0.25 * (S.drillY0 - p.y)) : 100;
       startQuake(p, qr); S.boomTime = QUAKE_TIME + 2.5; S.boomScale = 4.2; }
-    if (downMsg) toast(downMsg, true);
+    // the craft itself flew into a building: name it, and say only that
+    if (hitB) toast(`${hitB.name || KIND[hitB.kind] || '건물'}에 충돌!`, true);
+    else if (downMsg) toast(downMsg, true);
     S.mode = 'boom'; S.t = 0; S.boomPos.copy(p);
     S.orbit = Math.atan2(camera.position.x - p.x, camera.position.z - p.z);
     rocket.visible = false;
@@ -1683,7 +1685,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=90');
+    const { runPicker } = await import('./picker.js?v=91');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
