@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=85';
-import { City, pip } from './buildings.js?v=85';
-import { buildStructures } from './models.js?v=85';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=85';
-import { Particles, Debris } from './fx.js?v=85';
-import { Input } from './input.js?v=85';
-import { Sfx } from './audio.js?v=85';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=85';
-import { initStats, countDestroyed, countPlayer } from './stats.js?v=85';
+import { NIGHT } from './facade.js?v=86';
+import { City, pip } from './buildings.js?v=86';
+import { buildStructures } from './models.js?v=86';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=86';
+import { Particles, Debris } from './fx.js?v=86';
+import { Input } from './input.js?v=86';
+import { Sfx } from './audio.js?v=86';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=86';
+import { initStats, countDestroyed, countPlayer } from './stats.js?v=86';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -56,7 +56,7 @@ async function main(opts = {}) {
   setupCampusUi();
   initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=85`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=86`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -1110,7 +1110,7 @@ async function main(opts = {}) {
   // reload 1.5x faster (2.2s -> ~1.47s); bomb power x4: destroyed volume grows with R^3, so radius 7 -> 11
   const BOMBS_PER_SALVO = 18, MAX_CHARGES = 3, CHARGE_TIME = 2.2 / 1.5, BOMB_R = 11 * 1.3; // radius +30%
   // cluster missile submunitions
-  const CLUSTER_N = 18, SUB_R = 10, SUB_R_GROW = 7 * 2 / 3, SUB_R_MAX = 30; // radius grows ~4.7 m per second of flight
+  const CLUSTER_N = 29, SUB_R = 10, SUB_R_GROW = 7 * 2 / 3, SUB_R_MAX = 30; // radius grows ~4.7 m per second of flight
   const subGeo = new THREE.ConeGeometry(0.16, 0.9, 6); subGeo.rotateX(-Math.PI / 2);
   const subMat = new THREE.MeshLambertMaterial({ color: 0xd9dde0 });
   function dropSalvo() {
@@ -1676,7 +1676,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=85');
+    const { runPicker } = await import('./picker.js?v=86');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
