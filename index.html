@@ -191,6 +191,7 @@
   #pickPrev { left: calc(var(--safe-l) + 8px); } #pickNext { right: calc(var(--safe-r) + 8px); }
   #pickBack { position: absolute; z-index: 2; left: calc(var(--safe-l) + 10px); top: calc(var(--safe-t) + 10px); min-height: 38px; padding: 0 14px;
     border: 1px solid rgba(255,255,255,.35); border-radius: 3px; cursor: pointer; color: #fff; font: 15px/1 var(--display); letter-spacing: .5px; background: rgba(10,16,28,.42); }
+  @media (max-width: 560px) { #pickHead { top: calc(var(--safe-t) + 58px); } } /* keep the name clear of the back button */
   .pickArrow:disabled { opacity: .22; cursor: default; }
   #pickMsg { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 14px; }
   #picker.firing #pickHead, #picker.firing #pickFoot, #picker.firing .pickArrow, #picker.firing #pickBack { opacity: 0; pointer-events: none; transition: opacity .2s; }
@@ -319,6 +320,6 @@
 
 <div id="fadeBlack"><span id="fadeMsg" role="status"></span></div>
 
-<script type="module" src="src/main.js?v=88"></script>
+<script type="module" src="src/main.js?v=89"></script>
 </body>
 </html>
