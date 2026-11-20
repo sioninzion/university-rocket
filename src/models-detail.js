@@ -3,7 +3,7 @@
 // framed doors, stair towers, glass entrance halls, set-back top floors, skylights, flagpoles and roof plant.
 // An entry either dresses up a campus's existing hand-made model (keep: the earlier parts stay, the details are
 // added around them) or builds the whole building in one of the looks below.
-import { kit } from './models-seoul.js?v=96';
+import { kit } from './models-seoul.js?v=97';
 
 function pip(p, x, z) {
   let c = false;

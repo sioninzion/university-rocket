@@ -1,18 +1,18 @@
 // Building models. Campus landmarks are modelled by hand from photo references
 // (shape, storeys, colonnades, towers, roofs, materials); everything else gets a
 // style from its OSM type (Korean apartment blocks, houses, schools, shops...).
-import { WIN } from './facade.js?v=96';
-import { obb, area, makeRng, pip } from './buildings.js?v=96';
-import { cauLandmarks } from './models-cau.js?v=96';
-import { skkuLandmarks } from './models-skku.js?v=96';
-import { koreaCampus } from './models-korea.js?v=96';
-import { yonseiCampus } from './models-yonsei.js?v=96';
-import { snuCampus } from './models-snu.js?v=96';
-import { seoulCampuses } from './models-seoul.js?v=96';
-import { kssdCampuses } from './models-kssd.js?v=96';
-import { branchCampuses } from './models-branch.js?v=96';
-import { sciCampuses } from './models-sci.js?v=96';
-import { detailLandmarks } from './models-detail.js?v=96';
+import { WIN } from './facade.js?v=97';
+import { obb, area, makeRng, pip } from './buildings.js?v=97';
+import { cauLandmarks } from './models-cau.js?v=97';
+import { skkuLandmarks } from './models-skku.js?v=97';
+import { koreaCampus } from './models-korea.js?v=97';
+import { yonseiCampus } from './models-yonsei.js?v=97';
+import { snuCampus } from './models-snu.js?v=97';
+import { seoulCampuses } from './models-seoul.js?v=97';
+import { kssdCampuses } from './models-kssd.js?v=97';
+import { branchCampuses } from './models-branch.js?v=97';
+import { sciCampuses } from './models-sci.js?v=97';
+import { detailLandmarks } from './models-detail.js?v=97';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);

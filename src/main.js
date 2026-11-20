@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { NIGHT } from './facade.js?v=96';
-import { City, pip } from './buildings.js?v=96';
-import { buildStructures } from './models.js?v=96';
-import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=96';
-import { Particles, Debris } from './fx.js?v=96';
-import { Input } from './input.js?v=96';
-import { Sfx } from './audio.js?v=96';
-import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=96';
-import { initStats, countDestroyed, countPlayer } from './stats.js?v=96';
+import { NIGHT } from './facade.js?v=97';
+import { City, pip } from './buildings.js?v=97';
+import { buildStructures } from './models.js?v=97';
+import { Terrain, drawGroundCanvas, buildTerrainMesh, buildOuterGround, buildTrees, buildSky } from './world.js?v=97';
+import { Particles, Debris } from './fx.js?v=97';
+import { Input } from './input.js?v=97';
+import { Sfx } from './audio.js?v=97';
+import { CAMPUSES, selectedCampusId, rememberCampus, openPicker, exitToTitle } from './campuses.js?v=97';
+import { initStats, countDestroyed, countPlayer } from './stats.js?v=97';
 
 const $ = (id) => document.getElementById(id);
 const setLoad = (t) => { $('loadMsg').textContent = t; $('fadeMsg').textContent = t; };
@@ -56,7 +56,7 @@ async function main(opts = {}) {
   setupCampusUi();
   initStats(document.getElementById('globalStats'));
   setLoad('캠퍼스 지도 불러오는 중…');
-  const data = await (opts.data || fetch(`${campus.data}?v=96`).then(r => r.json()));
+  const data = await (opts.data || fetch(`${campus.data}?v=97`).then(r => r.json()));
   await frame();
 
   // ------------------------------------------------------------ renderer / scene
@@ -382,10 +382,11 @@ async function main(opts = {}) {
     S.weapon = S.nextWeapon;
     for (const w of Object.keys(crafts)) document.body.classList.toggle(w, S.weapon === w);
     $('skillName').textContent = craft.skill;
+    if (S.weapon === 'laser') $('skillName').textContent = '상승';
     $('skillIcon').textContent = SKILL_ICON[S.weapon] || '🔥';
     $('skillBadge').classList.toggle('show', S.weapon === 'bomber' || S.weapon === 'hunter');
     if (craft.booster && craft.booster.parent !== craft.group) restoreBooster();
-    S.dashed = false; S.dashT = 0; S.prevSkill = false; S.charges = MAX_CHARGES; S.clustered = false; S.drill = false; S.firing = false; S.hCharges = H_MAX; S.hQueue = 0; S.hFired = 0;
+    S.dashed = false; S.dashT = 0; S.prevSkill = false; S.charges = MAX_CHARGES; S.clustered = false; S.drill = false; S.firing = false; S.lz = null; S.lzBeam = 0; S.lzHold = 0; S.lzArmed = false; S.hCharges = H_MAX; S.hQueue = 0; S.hFired = 0;
     rocket.visible = true;
     setFlames(false);
     S.countdown = S.firstLaunch ? 3 : 1.5;
@@ -600,39 +601,106 @@ async function main(opts = {}) {
     if (t > 7) { nuke.on = false; fireball.visible = shock.visible = false; }
   }
 
-  // ------------------------------------------------------------ laser missile: a beam 4x the missile's radius fired along the heading
-  const BEAM_R = LASER_MISSILE_R * 4, BEAM_LEN = 840, BEAM_CUT_R = BEAM_R * 2.2; // drawn at BEAM_R, destroys within BEAM_CUT_R
-  const beamGeo2 = new THREE.CylinderGeometry(1, 1, 1, 20, 1, true); beamGeo2.rotateX(Math.PI / 2); beamGeo2.translate(0, 0, -0.5);
+  // ------------------------------------------------------------ laser missile
+  // The skill button first sends the missile straight up to 550 m above the ground, where it hangs still.
+  // A crosshair then appears: the joystick aims, a tap fires a 0.5 s beam, and holding charges it
+  // (every 0.5 s held: +1 m radius, +0.25 s firing). The shots draw on a fixed energy store; when it runs out
+  // the missile blows up in the sky and the next one is readied on the pad.
+  const LZ_ALT = 550, LZ_VMAX = 263 / 3.6, LZ_R0 = 3, LZ_DUR0 = 0.5, LZ_ENERGY = 10; // energy: base-radius beam-seconds
+  const LZ_MAXLEN = 2500;
+  const lzR = (hold) => LZ_R0 + hold / 0.5, lzDur = (hold) => LZ_DUR0 + (hold / 0.5) * 0.25;
+  const lzCost = (hold) => lzDur(hold) * (lzR(hold) / LZ_R0) / LZ_ENERGY;
+  const beamGeo2 = new THREE.CylinderGeometry(0.12, 1, 1, 20, 1, true); beamGeo2.rotateX(Math.PI / 2); beamGeo2.translate(0, 0, -0.5); // thin at the lens, full radius where it lands
   const lzCore = new THREE.Mesh(beamGeo2, addMat(0xffffff)), lzGlow = new THREE.Mesh(beamGeo2, addMat(0xff2a4a));
   lzCore.material.side = lzGlow.material.side = THREE.DoubleSide;
   const lzGroup = new THREE.Group(); lzGroup.add(lzGlow, lzCore); lzGroup.visible = false; scene.add(lzGroup);
-  let lzTick = 0;
+  // the spot under the crosshair, ringed at the radius the next shot will cut
+  const lzRingGeo = new THREE.RingGeometry(0.93, 1, 48); lzRingGeo.rotateX(-Math.PI / 2);
+  const lzRing = new THREE.Mesh(lzRingGeo, addMat(0xff3355)); lzRing.material.side = THREE.DoubleSide; lzRing.visible = false; scene.add(lzRing);
+  const lzAim = new THREE.Vector3();
+  let lzTick = 0, lzLen = LZ_MAXLEN;
+  // how far the missile's heading runs before it meets the ground
+  function lzRay(o) {
+    for (let t = 4; t < LZ_MAXLEN; t += 4) {
+      const x = o.x + fwd.x * t, y = o.y + fwd.y * t, z = o.z + fwd.z * t;
+      if (y < terrain.height(x, z)) return t;
+    }
+    return LZ_MAXLEN;
+  }
+  function laserMissile(dt, inp) {
+    if (S.lz === 'climb') {
+      // nose straight up, speeding to 263 km/h and easing off just below the hover height
+      S.pitch += (1.55 - S.pitch) * Math.min(1, dt * 3);
+      S.roll += (0 - S.roll) * Math.min(1, dt * 4);
+      const rem = S.lzY - S.pos.y;
+      S.speed = Math.min(LZ_VMAX, S.speed + 35 * dt, Math.sqrt(Math.max(0, 2 * 30 * rem)) + 2);
+      S.boosting = true;
+      computeFwd();
+      if (rem <= 1) { S.lz = 'hover'; S.lzT = 0; S.pos.y = S.lzY; S.speed = 0; S.boosting = false; S.lzArmed = !inp.boost; sfx.boom(0.25); }
+      return;
+    }
+    // hovering: the joystick turns the crosshair, the missile stays put
+    S.speed = 0; S.boosting = false;
+    S.lzT += dt;
+    if (S.lzT < 1.2) S.pitch += (-1.05 - S.pitch) * Math.min(1, dt * 4); // first swing the nose down after the climb
+    else {
+      S.yaw += inp.x * 0.75 * dt;
+      S.pitch = clamp(S.pitch + inp.y * 0.6 * dt, -1.55, -0.12);
+    }
+    S.roll += (0 - S.roll) * Math.min(1, dt * 4);
+    computeFwd();
+    if (S.lzBeam > 0) {
+      S.lzBeam -= dt;
+      if (S.lzBeam <= 0) { S.lzBeam = 0; if (S.fuel < lzCost(0) * 0.5) { toast('⚡ 에너지 소진!', true); explode(null); } } // out of energy: not even half a tap left
+      return;
+    }
+    if (!inp.boost) {
+      if (S.lzArmed && S.lzHold > 0) {
+        // fire: a tap is the base shot; with too little energy left the beam is cut short and this is the last one
+        const hold = S.lzHold, cost = lzCost(hold);
+        S.lzR = lzR(hold);
+        S.lzBeam = cost <= S.fuel ? lzDur(hold) : S.fuel * LZ_ENERGY / (S.lzR / LZ_R0);
+        S.fuel = Math.max(0, S.fuel - cost);
+        lzTick = 0; S.lzHold = 0;
+      }
+      S.lzArmed = true;
+    } else if (S.lzArmed) {
+      // charging stops where the energy left could no longer pay for it
+      if (S.lzHold === 0 || lzCost(S.lzHold + dt) <= S.fuel) S.lzHold += dt;
+    }
+  }
   function updateBeam(dt) {
-    const on = S.mode === 'flight' && S.weapon === 'laser' && S.firing;
+    const hover = S.mode === 'flight' && S.weapon === 'laser' && S.lz === 'hover';
+    const on = hover && S.lzBeam > 0;
     lzGroup.visible = on;
     sfx.beam(on && !S.paused);
-    if (!on) { lzTick = 0; return; }
+    const aim = $('aim');
+    aim.classList.toggle('on', hover);
+    if (!hover) { lzRing.visible = false; lzTick = 0; return; }
     computeFwd();
     const o = tmp.copy(S.pos).addScaledVector(fwd, 2.6);
-    // the beam stops where it meets the ground
-    let len = BEAM_LEN;
-    for (let t = 4; t < BEAM_LEN; t += 4) {
-      const x = o.x + fwd.x * t, y = o.y + fwd.y * t, z = o.z + fwd.z * t;
-      if (y < terrain.height(x, z)) { len = t; break; }
-    }
+    lzLen = lzRay(o);
+    lzAim.copy(o).addScaledVector(fwd, lzLen);
+    const R = on ? S.lzR : lzR(S.lzHold);
+    lzRing.visible = lzLen < LZ_MAXLEN;
+    lzRing.position.set(lzAim.x, terrain.height(lzAim.x, lzAim.z) + 0.6, lzAim.z);
+    lzRing.scale.setScalar(R);
+    lzRing.material.opacity = S.lzHold > 0 ? 0.6 + 0.4 * Math.sin(performance.now() * 0.02) : 0.75;
+    aim.classList.toggle('charge', S.lzHold > 0);
+    $('aimInfo').textContent = S.lzHold > 0 ? `반지름 ${lzR(S.lzHold).toFixed(1)}m · ${lzDur(S.lzHold).toFixed(2)}초` : `에너지 ${Math.round(S.fuel * 100)}%`;
+    if (!on) { lzTick = 0; return; }
     lzGroup.position.copy(o);
     lzGroup.quaternion.copy(craft.group.quaternion);
     const pulse = 0.85 + 0.15 * Math.sin(performance.now() * 0.05);
-    lzCore.scale.set(BEAM_R * 0.4 * pulse, BEAM_R * 0.4 * pulse, len);
-    lzGlow.scale.set(BEAM_R * pulse, BEAM_R * pulse, len);
+    lzCore.scale.set(S.lzR * 0.4 * pulse, S.lzR * 0.4 * pulse, lzLen);
+    lzGlow.scale.set(S.lzR * pulse, S.lzR * pulse, lzLen);
     lzCore.material.opacity = 0.95; lzGlow.material.opacity = 0.55;
-    S.shake = Math.max(S.shake, 0.35);
-    const end = new THREE.Vector3(o.x + fwd.x * len, o.y + fwd.y * len, o.z + fwd.z * len);
-    for (let i = 0; i < 3; i++) fire.spawn(end.x, end.y, end.z, (Math.random() - 0.5) * 20, Math.random() * 15, (Math.random() - 0.5) * 20, 2, 3, 0.3, 1, 0.35, 0.4, 1, 0.94, 0);
+    S.shake = Math.max(S.shake, 0.25 + S.lzR * 0.02);
+    for (let i = 0; i < 4; i++) fire.spawn(lzAim.x + (Math.random() - 0.5) * S.lzR, lzAim.y + 1, lzAim.z + (Math.random() - 0.5) * S.lzR, (Math.random() - 0.5) * 20, Math.random() * 18, (Math.random() - 0.5) * 20, 2 + S.lzR * 0.3, 3, 0.3, 1, 0.35, 0.4, 1, 0.94, 0);
     lzTick -= dt;
     if (lzTick <= 0) {
-      lzTick = 1 / 18; // hits 18 times a second
-      const { n, main, downMsg } = blast(o.clone(), BEAM_CUT_R, 0.8, null, true, false, false, null, { ox: o.x, oy: o.y, oz: o.z, dx: fwd.x, dy: fwd.y, dz: fwd.z, len });
+      lzTick = 1 / 18; // hits 18 times a second, everything within the radius along the beam
+      const { downMsg } = blast(o.clone(), S.lzR, 0.8, null, true, false, false, null, { ox: o.x, oy: o.y, oz: o.z, dx: fwd.x, dy: fwd.y, dz: fwd.z, len: lzLen });
       if (downMsg) toast(downMsg, true);
     }
   }
@@ -1306,6 +1374,8 @@ async function main(opts = {}) {
         S.roll += dt * 6; // spin-stabilised
         S.boosting = true;
         fwd.copy(S.dashDir);
+      } else if (S.weapon === 'laser' && S.lz) {
+        laserMissile(dt, inp);
       } else if (S.weapon === 'quake' && S.drill) {
         // drill dive: nose straight down, spinning, accelerating into the ground
         S.pitch += (-1.52 - S.pitch) * Math.min(1, dt * 5);
@@ -1338,9 +1408,8 @@ async function main(opts = {}) {
           if (S.hQueue > 0) { S.hQTimer -= dt; if (S.hQTimer <= 0) { S.hQTimer += H_GAP; launchWarhead(S.hFired++); S.hQueue--; } }
         } else if (S.weapon === 'laser') {
           S.boosting = false;
-          targetSpeed = 100 / 3.6; // laser missile cruises at 100 km/h (as shown on the HUD)
-          S.firing = inp.boost && S.fuel > (S.firing ? 0 : 0.1);
-          S.fuel = clamp(S.fuel + (S.firing ? -0.17 : 0.12 * 1.8) * dt, 0, 1); // half the drain, 1.8x recharge
+          targetSpeed = LZ_VMAX; // top speed 263 km/h (as shown on the HUD)
+          if (skillPress && S.t > 0.3) { S.lz = 'climb'; S.lzY = terrain.height(S.pos.x, S.pos.z) + LZ_ALT; S.lzArmed = false; S.lzHold = 0; $('skillName').textContent = '레이저'; }
         } else if (S.weapon === 'quake') {
           S.boosting = false;
           if (skillPress && S.t > 0.3) { S.drill = true; S.drillY0 = S.pos.y; S.drillT = 0; sfx.boom(0.3); }
@@ -1367,7 +1436,7 @@ async function main(opts = {}) {
         if (!FREE_FLIGHT.has(S.weapon)) targetSpeed *= 1 - GRAVITY_SPEED * Math.sin(S.pitch);
         const dv = targetSpeed - S.speed;
         S.speed += clamp(dv, -40 * dt, (S.boosting ? 95 : 32) * dt);
-        if (!S.dashed) computeFwd();
+        if (!S.dashed && !(S.weapon === 'laser' && S.lz)) computeFwd();
       }
       const dist = S.speed * dt;
       const steps = S.mode === 'flight' ? Math.max(1, Math.ceil(dist / 0.8)) : 0; // 0 once the craft has split or detonated
@@ -1376,7 +1445,7 @@ async function main(opts = {}) {
         const h = city.hit(S.pos.x, S.pos.y, S.pos.z);
         if (h) { explode(h.b); break; }
         if (S.pos.y < terrain.height(S.pos.x, S.pos.z) + 0.3) { if (inWater(S.pos.x, S.pos.z)) splash(); else explode(null); break; }
-        if (!terrain.inside(S.pos.x, S.pos.z, 15) || S.pos.y > 1200 || S.t > 60) { S.outOfBounds = true; explode(null); break; }
+        if (!terrain.inside(S.pos.x, S.pos.z, 15) || S.pos.y > 1200 || (S.t > 60 && !S.lz)) { S.outOfBounds = true; explode(null); break; }
       }
       if (S.mode === 'flight') {
         // exhaust
@@ -1458,6 +1527,12 @@ async function main(opts = {}) {
       tmp.set(pad.x - hx * 20 + hz * 6, padTop + 10 + rise, pad.z - hz * 20 - hx * 6);
       camPos.lerp(tmp, S.mode === 'title' ? 1 : k);
       camLook.lerp(tmp.set(pad.x + hx * 30, padTop + 6, pad.z + hz * 30), S.mode === 'title' ? 1 : k);
+    } else if (S.mode === 'flight' && S.weapon === 'laser' && S.lz === 'hover') {
+      // just behind and above the hanging missile, looking where it aims (the crosshair sits on that spot)
+      computeFwd();
+      tmp.copy(S.pos).addScaledVector(fwd, -14); tmp.y += 2.5;
+      camPos.lerp(tmp, 1 - Math.exp(-dt * 8));
+      camLook.lerp(tmp.copy(S.pos).addScaledVector(fwd, 300), 1 - Math.exp(-dt * 12));
     } else if (S.mode === 'flight' && S.t < 1.3) {
       // lift-off: watch the rocket leave the pad from the ground
       camLook.lerp(S.pos, 1 - Math.exp(-dt * 8));
@@ -1685,7 +1760,7 @@ function clearBlack() {
 async function boot() {
   if (new URLSearchParams(location.search).has('pick')) {
     document.body.classList.add('autoStart');
-    const { runPicker } = await import('./picker.js?v=96');
+    const { runPicker } = await import('./picker.js?v=97');
     const { id, data, sfx } = await runPicker({ enterFullscreen });
     const blackSince = performance.now();
     setTimeout(() => $('fadeMsg').classList.add('show'), BLACK_HOLD + 200); // only if loading runs long
