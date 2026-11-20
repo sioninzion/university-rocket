@@ -1,6 +1,6 @@
 // 카이스트·디지스트와 '광명상가가'(광운대·명지대 인문캠·상명대 서울캠·가톨릭대 성심교정·가천대 글로벌캠):
 // landmarks keyed by OSM id, plus each campus's palette for the buildings without a hand-made model.
-import { kit } from './models-seoul.js?v=95';
+import { kit } from './models-seoul.js?v=96';
 
 export const sciCampuses = {
   // 한국과학기술원 (대전): pale concrete and glass research blocks around 오리연못
