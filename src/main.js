@@ -1447,7 +1447,11 @@ async function main(opts = {}) {
         if (S.pos.y < terrain.height(S.pos.x, S.pos.z) + 0.3) { if (inWater(S.pos.x, S.pos.z)) splash(); else explode(null); break; }
         if (!terrain.inside(S.pos.x, S.pos.z, 15) || S.pos.y > 1200 || (S.t > 60 && !S.lz)) { S.outOfBounds = true; explode(null); break; }
       }
-      if (S.mode === 'flight') {
+      if (S.mode === 'flight' && S.weapon === 'laser' && S.lz === 'hover') {
+        // hanging still: only a faint flame, no smoke or sparks drifting into the crosshair
+        const [f1, f2] = craft.flames;
+        f1.scale.set(0.45, 0.45, 0.35 * (0.85 + Math.random() * 0.3)); f2.scale.set(0.25, 0.25, 0.2);
+      } else if (S.mode === 'flight') {
         // exhaust
         const tl = S.weapon === 'ballistic' && S.dashed ? 2.4 : craft.tail;
         const tx = S.pos.x - fwd.x * tl, ty = S.pos.y - fwd.y * tl, tz = S.pos.z - fwd.z * tl;
@@ -1478,7 +1482,7 @@ async function main(opts = {}) {
     }
 
     rocket.position.copy(S.pos);
-    engineLight.position.copy(S.pos); engineLight.intensity = night && S.mode === 'flight' ? (S.boosting ? 900 : 500) : 0;
+    engineLight.position.copy(S.pos); engineLight.intensity = night && S.mode === 'flight' && S.lz !== 'hover' ? (S.boosting ? 900 : 500) : 0;
     rocket.rotation.set(S.pitch, -S.yaw, S.roll, 'YXZ');
 
     if (dropped.obj) {
