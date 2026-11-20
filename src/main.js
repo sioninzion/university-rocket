@@ -608,7 +608,7 @@ async function main(opts = {}) {
   // passes through. The shots draw on a fixed energy store; when it runs out the missile blows up in the sky and the
   // next one is readied on the pad.
   const LZ_ALT = 550, LZ_VMAX = 263 / 3.6, LZ_CLIMB = 1050 / 3.6, LZ_ACC = 160, LZ_R0 = 17, LZ_DUR0 = 0.2, LZ_V = 1700 / 3.6;
-  const LZ_ENERGY = 6, LZ_MAXLEN = 2500; // energy: base-radius firing seconds
+  const LZ_ENERGY = 60, LZ_MAXLEN = 2500; // energy: base-radius firing seconds
   const lzR = (hold) => LZ_R0 + (hold / 0.5) * 3, lzDur = (hold) => LZ_DUR0 + (hold / 0.5) * 0.25;
   const lzCost = (hold) => lzDur(hold) * (lzR(hold) / LZ_R0) / LZ_ENERGY;
   // a burst is drawn thin at its tail and full width at its head, like a bolt of light
