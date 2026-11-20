@@ -522,7 +522,7 @@ async function main(opts = {}) {
     const power = clamp((S.speed - 50) / 65, 0, 1);
     // ballistic dash: blast keeps growing with speed (capped only to stay playable)
     // ballistic missile: blast radius (m) = impact speed in km/h (as on the HUD) / 23
-    let R = S.weapon === 'ballistic' ? (S.speed * 3.6) / 23 : 8 + 6 * power;
+    let R = S.weapon === 'ballistic' ? (S.speed * 3.6) / 23 : (8 + 6 * power) * (S.weapon === 'rocket' ? 2 : 1); // the basic rocket hits twice as wide
     S.boomTime = 3.4; S.boomScale = 1;
     if (S.weapon === 'nuke') { R = NUKE_R; S.boomTime = 7; S.boomScale = 4; startNukeFx(p); }
     const { n, main, downMsg } = blast(p, R, S.weapon === 'nuke' ? 1 : power, hitB, false);
