@@ -604,10 +604,10 @@ async function main(opts = {}) {
   // ------------------------------------------------------------ laser missile
   // The skill button first sends the missile straight up (up to 1050 km/h) to 550 m above the ground, where it hangs
   // still. A crosshair then appears: the joystick aims, a tap fires a 0.2 s burst of radius 17 m, and holding charges it
-  // (every 0.5 s held: +3 m radius, +0.25 s firing). Each burst flies from the lens at 1700 km/h, cutting whatever it
+  // (every 0.5 s held: +3 m radius, +0.25 s firing). Each burst flies from the lens at 2222 km/h; while it is still being emitted it follows the crosshair, cutting whatever it
   // passes through. The shots draw on a fixed energy store; when it runs out the missile blows up in the sky and the
   // next one is readied on the pad.
-  const LZ_ALT = 550, LZ_VMAX = 263 / 3.6, LZ_CLIMB = 1050 / 3.6, LZ_ACC = 160, LZ_R0 = 17, LZ_DUR0 = 0.2, LZ_V = 1700 / 3.6;
+  const LZ_ALT = 550, LZ_VMAX = 263 / 3.6, LZ_CLIMB = 1050 / 3.6, LZ_ACC = 160, LZ_R0 = 17, LZ_DUR0 = 0.2, LZ_V = 2222 / 3.6;
   const LZ_ENERGY = 60, LZ_MAXLEN = 2500; // energy: base-radius firing seconds
   const lzR = (hold) => LZ_R0 + (hold / 0.5) * 3, lzDur = (hold) => LZ_DUR0 + (hold / 0.5) * 0.25;
   const lzCost = (hold) => lzDur(hold) * (lzR(hold) / LZ_R0) / LZ_ENERGY;
@@ -681,10 +681,14 @@ async function main(opts = {}) {
     }
   }
   function updateBursts(dt) {
-    let landed = false;
     for (let i = bursts.length - 1; i >= 0; i--) {
       const b = bursts[i];
       b.t += dt;
+      if (b.t < b.dur && S.lz === 'hover') {
+        // still emitting: the beam sweeps with the crosshair
+        computeFwd();
+        b.o.copy(S.pos).addScaledVector(fwd, 2.6); b.dir.copy(fwd); b.q.copy(craft.group.quaternion); b.len = lzRay(b.o);
+      }
       const head = Math.min(b.t * LZ_V, b.len), tail = Math.min(Math.max(0, (b.t - b.dur) * LZ_V), b.len);
       if (tail >= b.len || S.mode !== 'flight') { b.mesh.visible = false; bursts.splice(i, 1); continue; }
       const L = head - tail;
@@ -694,7 +698,6 @@ async function main(opts = {}) {
       b.mesh.core.scale.set(b.R * 0.4 * pulse, b.R * 0.4 * pulse, Math.max(L, 0.01));
       b.mesh.glow.scale.set(b.R * pulse, b.R * pulse, Math.max(L, 0.01));
       if (head >= b.len && b.len < LZ_MAXLEN) {
-        landed = true;
         const e = tmp.copy(b.o).addScaledVector(b.dir, b.len);
         for (let k = 0; k < 5; k++) fire.spawn(e.x + (Math.random() - 0.5) * b.R, e.y + 1, e.z + (Math.random() - 0.5) * b.R, (Math.random() - 0.5) * 24, Math.random() * 20, (Math.random() - 0.5) * 24, 2 + b.R * 0.25, 3, 0.3, 1, 0.35, 0.4, 1, 0.94, 0);
         if (!b.hitFx) { b.hitFx = true; flash.position.set(e.x, e.y + 20, e.z); flash.intensity = 3000 + b.R * 200; }
@@ -708,7 +711,6 @@ async function main(opts = {}) {
       }
     }
     sfx.beam(bursts.length > 0 && !S.paused);
-    if (landed) S.shake = Math.max(S.shake, 0.6);
   }
   function updateBeam(dt) {
     updateBursts(dt);
@@ -1595,6 +1597,7 @@ async function main(opts = {}) {
     const gy = terrain.height(camPos.x, camPos.z) + 2;
     if (camPos.y < gy) camPos.y = gy;
     camera.position.copy(camPos);
+    if (S.weapon === 'laser' && S.lz === 'hover') S.shake = 0; // the hanging missile and its view stay steady while it fires
     if (S.shake > 0.01) {
       camera.position.x += (Math.random() - 0.5) * S.shake;
       camera.position.y += (Math.random() - 0.5) * S.shake;
