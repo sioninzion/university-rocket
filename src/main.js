@@ -604,27 +604,27 @@ async function main(opts = {}) {
   // ------------------------------------------------------------ laser missile
   // The skill button first sends the missile straight up (up to 1050 km/h) to 550 m above the ground, where it hangs
   // still. A crosshair then appears: the joystick aims, a tap fires a 0.2 s burst of radius 17 m, and holding charges it
-  // (every 0.5 s held: +3 m radius, +0.25 s firing). Each burst flies from the lens at 2222 km/h; while it is still being emitted it follows the crosshair, cutting whatever it
+  // (every 0.5 s held: +4.5 m radius, +0.25 s firing; light gathers at the lens meanwhile). The light leaves the lens at
+  // 2222 km/h in short packets, each keeping the line it was fired on, so a beam swept while firing bends like a jet of water, cutting whatever it
   // passes through. The shots draw on a fixed energy store; when it runs out the missile blows up in the sky and the
   // next one is readied on the pad.
   const LZ_ALT = 550, LZ_VMAX = 263 / 3.6, LZ_CLIMB = 1050 / 3.6, LZ_ACC = 160, LZ_R0 = 17, LZ_DUR0 = 0.2, LZ_V = 2222 / 3.6;
   const LZ_ENERGY = 60, LZ_MAXLEN = 2500; // energy: base-radius firing seconds
-  const lzR = (hold) => LZ_R0 + (hold / 0.5) * 3, lzDur = (hold) => LZ_DUR0 + (hold / 0.5) * 0.25;
+  const lzR = (hold) => LZ_R0 + (hold / 0.5) * 4.5, lzDur = (hold) => LZ_DUR0 + (hold / 0.5) * 0.25;
   const lzCost = (hold) => lzDur(hold) * (lzR(hold) / LZ_R0) / LZ_ENERGY;
-  // a burst is drawn thin at its tail and full width at its head, like a bolt of light
-  const beamGeo2 = new THREE.CylinderGeometry(0.12, 1, 1, 20, 1, true); beamGeo2.rotateX(Math.PI / 2); beamGeo2.translate(0, 0, -0.5);
-  const lzPool = [];
-  function lzMesh() {
-    let g = lzPool.find(m => !m.visible);
-    if (!g) {
-      const core = new THREE.Mesh(beamGeo2, addMat(0xffffff)), glow = new THREE.Mesh(beamGeo2, addMat(0xff2a4a));
-      core.material.side = glow.material.side = THREE.DoubleSide; core.material.opacity = 0.95; glow.material.opacity = 0.55;
-      g = new THREE.Group(); g.add(glow, core); g.core = core; g.glow = glow; scene.add(g); lzPool.push(g);
-    }
-    g.visible = true;
-    return g;
-  }
-  const bursts = []; // { t, dur, R, o, dir, q, len, mesh, tick }
+  // light packets, drawn as instanced tubes: each widens from the lens to the full radius over its first 60 m
+  const LZ_SLICES = 900;
+  const sliceGeo = new THREE.CylinderGeometry(1, 1, 1, 16, 1, true); sliceGeo.rotateX(Math.PI / 2); sliceGeo.translate(0, 0, 0.5); // 0..1 along +z
+  const lzCoreI = new THREE.InstancedMesh(sliceGeo, addMat(0xffffff), LZ_SLICES), lzGlowI = new THREE.InstancedMesh(sliceGeo, addMat(0xff2a4a), LZ_SLICES);
+  for (const m of [lzCoreI, lzGlowI]) { m.material.side = THREE.DoubleSide; m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
+  lzCoreI.material.opacity = 0.9; lzGlowI.material.opacity = 0.42;
+  const slices = []; // { o, dir, tb, h, len, R, landed }
+  const lzHits = [], lzQ = new THREE.Quaternion(), lzM = new THREE.Matrix4(), lzS = new THREE.Vector3(), lzP = new THREE.Vector3(), LZ_Z = new THREE.Vector3(0, 0, 1);
+  let lzClock = 0, lzTick = 0;
+  // charging: a glowing ball gathers at the lens while sparks of light stream into it
+  const lzOrb = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), addMat(0xff4a6a)); lzOrb.visible = false; scene.add(lzOrb);
+  const lzOrbCore = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), addMat(0xffffff)); lzOrbCore.scale.setScalar(0.55); lzOrb.add(lzOrbCore);
+  const lzNose = new THREE.Vector3();
   // the spot under the crosshair, ringed at the radius the next shot will cut
   const lzRingGeo = new THREE.RingGeometry(0.96, 1, 64); lzRingGeo.rotateX(-Math.PI / 2);
   const lzRing = new THREE.Mesh(lzRingGeo, addMat(0xff3355)); lzRing.material.side = THREE.DoubleSide; lzRing.visible = false; scene.add(lzRing);
@@ -660,9 +660,14 @@ async function main(opts = {}) {
     }
     S.roll += (0 - S.roll) * Math.min(1, dt * 4);
     computeFwd();
-    if (S.lzBeam > 0) { S.lzBeam = Math.max(0, S.lzBeam - dt); return; } // still emitting the last shot
+    if (S.lzBeam > 0) { // still emitting: send out this frame's packet of light along the current aim
+      const h = Math.min(dt, S.lzBeam), o = S.pos.clone().addScaledVector(fwd, 2.6);
+      slices.push({ o, dir: fwd.clone(), tb: lzClock, h, len: lzRay(o), R: S.lzR, landed: false });
+      S.lzBeam -= h;
+      return;
+    }
     // out of energy (not even half a tap left): once the last burst has landed, blow up
-    if (S.fuel < lzCost(0) * 0.5) { if (!bursts.length) { toast('⚡ 에너지 소진!', true); explode(null); } return; }
+    if (S.fuel < lzCost(0) * 0.5) { if (!slices.length) { toast('⚡ 에너지 소진!', true); explode(null); } return; }
     if (!inp.boost) {
       if (S.lzArmed && S.lzHold > 0) {
         // fire: a tap is the base shot; with too little energy left the burst is cut short and this is the last one
@@ -670,8 +675,6 @@ async function main(opts = {}) {
         const dur = cost <= S.fuel ? lzDur(hold) : S.fuel * LZ_ENERGY / (R / LZ_R0);
         S.fuel = Math.max(0, S.fuel - cost);
         S.lzBeam = dur; S.lzR = R; S.lzHold = 0;
-        const o = S.pos.clone().addScaledVector(fwd, 2.6);
-        bursts.push({ t: 0, dur, R, o, dir: fwd.clone(), q: craft.group.quaternion.clone(), len: lzRay(o), mesh: lzMesh(), tick: 0 });
         sfx.boom(0.2 + R * 0.01);
       }
       S.lzArmed = true;
@@ -681,43 +684,50 @@ async function main(opts = {}) {
     }
   }
   function updateBursts(dt) {
-    for (let i = bursts.length - 1; i >= 0; i--) {
-      const b = bursts[i];
-      b.t += dt;
-      if (b.t < b.dur && S.lz === 'hover') {
-        // still emitting: the beam sweeps with the crosshair
-        computeFwd();
-        b.o.copy(S.pos).addScaledVector(fwd, 2.6); b.dir.copy(fwd); b.q.copy(craft.group.quaternion); b.len = lzRay(b.o);
+    lzClock += dt;
+    const pulse = 0.88 + 0.12 * Math.sin(performance.now() * 0.05);
+    let n = 0;
+    for (let i = slices.length - 1; i >= 0; i--) {
+      const sl = slices[i], age = lzClock - sl.tb;
+      const front = Math.min(age * LZ_V, sl.len), back = Math.min(Math.max(0, (age - sl.h) * LZ_V), sl.len);
+      if (back >= sl.len || S.mode !== 'flight') { slices.splice(i, 1); continue; }
+      if (!sl.landed && front >= sl.len && sl.len < LZ_MAXLEN) {
+        sl.landed = true; lzHits.push(sl);
+        const e = lzP.copy(sl.o).addScaledVector(sl.dir, sl.len);
+        for (let k = 0; k < 2; k++) fire.spawn(e.x + (Math.random() - 0.5) * sl.R, e.y + 1, e.z + (Math.random() - 0.5) * sl.R, (Math.random() - 0.5) * 24, Math.random() * 20, (Math.random() - 0.5) * 24, 2 + sl.R * 0.25, 3, 0.3, 1, 0.35, 0.4, 1, 0.94, 0);
+        flash.position.set(e.x, e.y + 20, e.z); flash.intensity = Math.max(flash.intensity, 2000 + sl.R * 150);
       }
-      const head = Math.min(b.t * LZ_V, b.len), tail = Math.min(Math.max(0, (b.t - b.dur) * LZ_V), b.len);
-      if (tail >= b.len || S.mode !== 'flight') { b.mesh.visible = false; bursts.splice(i, 1); continue; }
-      const L = head - tail;
-      b.mesh.position.copy(b.o).addScaledVector(b.dir, tail);
-      b.mesh.quaternion.copy(b.q);
-      const pulse = 0.85 + 0.15 * Math.sin(performance.now() * 0.05);
-      b.mesh.core.scale.set(b.R * 0.4 * pulse, b.R * 0.4 * pulse, Math.max(L, 0.01));
-      b.mesh.glow.scale.set(b.R * pulse, b.R * pulse, Math.max(L, 0.01));
-      if (head >= b.len && b.len < LZ_MAXLEN) {
-        const e = tmp.copy(b.o).addScaledVector(b.dir, b.len);
-        for (let k = 0; k < 5; k++) fire.spawn(e.x + (Math.random() - 0.5) * b.R, e.y + 1, e.z + (Math.random() - 0.5) * b.R, (Math.random() - 0.5) * 24, Math.random() * 20, (Math.random() - 0.5) * 24, 2 + b.R * 0.25, 3, 0.3, 1, 0.35, 0.4, 1, 0.94, 0);
-        if (!b.hitFx) { b.hitFx = true; flash.position.set(e.x, e.y + 20, e.z); flash.intensity = 3000 + b.R * 200; }
-      }
-      b.tick -= dt;
-      if (b.tick <= 0 && L > 0.5) {
-        b.tick = 1 / 18; // cuts 18 times a second, everything within the radius along the stretch it occupies
-        const st = b.o.clone().addScaledVector(b.dir, tail);
-        const { downMsg } = blast(st, b.R, 0.8, null, true, false, false, null, { ox: st.x, oy: st.y, oz: st.z, dx: b.dir.x, dy: b.dir.y, dz: b.dir.z, len: L });
+      const L = front - back;
+      if (L < 0.01 || n >= LZ_SLICES) continue;
+      const r = sl.R * Math.min(1, 0.1 + (front + back) / 120) * pulse;
+      lzQ.setFromUnitVectors(LZ_Z, sl.dir);
+      lzP.copy(sl.o).addScaledVector(sl.dir, back);
+      lzCoreI.setMatrixAt(n, lzM.compose(lzP, lzQ, lzS.set(r * 0.38, r * 0.38, L)));
+      lzGlowI.setMatrixAt(n, lzM.compose(lzP, lzQ, lzS.set(r, r, L)));
+      n++;
+    }
+    lzCoreI.count = lzGlowI.count = n;
+    lzCoreI.instanceMatrix.needsUpdate = lzGlowI.instanceMatrix.needsUpdate = true;
+    // cutting, 18 times a second: along the last 150 m of up to three packets that reached the ground since the last cut
+    lzTick -= dt;
+    if (lzTick <= 0 && lzHits.length) {
+      lzTick = 1 / 18;
+      const pick = lzHits.length <= 3 ? lzHits : [lzHits[0], lzHits[lzHits.length >> 1], lzHits[lzHits.length - 1]];
+      for (const sl of pick) {
+        const d0 = Math.max(0, sl.len - 150), st = sl.o.clone().addScaledVector(sl.dir, d0);
+        const { downMsg } = blast(st, sl.R, 0.8, null, true, false, false, null, { ox: st.x, oy: st.y, oz: st.z, dx: sl.dir.x, dy: sl.dir.y, dz: sl.dir.z, len: sl.len - d0 });
         if (downMsg) toast(downMsg, true);
       }
+      lzHits.length = 0;
     }
-    sfx.beam(bursts.length > 0 && !S.paused);
+    sfx.beam(slices.length > 0 && !S.paused);
   }
   function updateBeam(dt) {
     updateBursts(dt);
     const hover = S.mode === 'flight' && S.weapon === 'laser' && S.lz === 'hover';
     const aim = $('aim');
     aim.classList.toggle('on', hover);
-    if (!hover) { lzRing.visible = false; return; }
+    if (!hover) { lzRing.visible = false; lzOrb.visible = false; return; }
     computeFwd();
     const o = tmp.copy(S.pos).addScaledVector(fwd, 2.6);
     lzLen = lzRay(o);
@@ -727,7 +737,24 @@ async function main(opts = {}) {
     lzRing.scale.setScalar(lzR(S.lzHold));
     lzRing.material.opacity = S.lzHold > 0 ? 0.6 + 0.4 * Math.sin(performance.now() * 0.02) : 0.75;
     aim.classList.toggle('charge', S.lzHold > 0);
-    $('aimInfo').textContent = S.lzHold > 0 ? `반지름 ${lzR(S.lzHold).toFixed(0)}m · ${lzDur(S.lzHold).toFixed(2)}초` : `에너지 ${Math.round(S.fuel * 100)}%`;
+    $('aimInfo').textContent = S.lzHold > 0 ? `반지름 ${lzR(S.lzHold).toFixed(1)}m · ${lzDur(S.lzHold).toFixed(2)}초` : `에너지 ${Math.round(S.fuel * 100)}%`;
+    // light gathering at the lens while charging, a bright muzzle while firing
+    const charging = S.lzHold > 0, firing = S.lzBeam > 0;
+    lzOrb.visible = charging || firing;
+    if (lzOrb.visible) {
+      const k = charging ? Math.min(1, S.lzHold / 2.5) : 1, now = performance.now();
+      lzNose.copy(S.pos).addScaledVector(fwd, 3.1);
+      lzOrb.position.copy(lzNose);
+      lzOrb.scale.setScalar((firing ? 2.2 : 0.35 + 1.7 * k) * (0.85 + 0.15 * Math.sin(now * (charging ? 0.03 + 0.03 * k : 0.06))));
+      lzOrb.material.opacity = firing ? 0.75 : 0.45 + 0.35 * k;
+      if (charging) for (let i = 0, m = 2 + Math.round(5 * k); i < m; i++) {
+        // from a shell around the lens, on the side away from the camera so the sparks stay in front of it
+        const u = lzP.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+        const back = u.dot(fwd); if (back < 0.15) u.addScaledVector(fwd, 0.15 - back).normalize();
+        const d = 1.8 + Math.random() * (1.8 + 3.5 * k), life = 0.25 + Math.random() * 0.12;
+        fire.spawn(lzNose.x + u.x * d, lzNose.y + u.y * d, lzNose.z + u.z * d, -u.x * d / life, -u.y * d / life, -u.z * d / life, 0.2 + 0.3 * k, 0, life, 1, 0.3 + 0.5 * Math.random(), 0.45, 1, 1, 0);
+      }
+    }
   }
 
   // ------------------------------------------------------------ guided bomber: each skill press launches a warhead
