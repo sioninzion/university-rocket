@@ -199,6 +199,49 @@ CAMPUSES = {
         "outline": ("way", 171904156),
         "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22},
     },
+    "kaist": {  # 한국과학기술원 (대전 본원): 정문 on 대학로, 갑천 to the south
+        "origin": (36.36582, 127.36382), "bbox": (36.3615, 127.3525, 36.3790, 127.3735), "step": 5.0,
+        "outline": ("way", 73679850),
+        # houses only in 어은동 west of campus: the institutes to the north keep their wooded grounds
+        "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22,
+                                "regions": [[(36.3790, 127.3525), (36.3790, 127.3572), (36.3615, 127.3580), (36.3615, 127.3525)]]},
+    },
+    "dgist": {  # 대구경북과학기술원 (달성 테크노폴리스): OSM has no campus boundary, traced from aerial imagery
+        "origin": (35.70030, 128.45764), "bbox": (35.6950, 128.4470, 35.7105, 128.4650), "step": 5.0,
+        "outline": [[(35.70829, 128.45215), (35.70860, 128.45437), (35.70839, 128.45855), (35.70617, 128.45911), (35.70451, 128.45831), (35.70285, 128.45820), (35.70275, 128.45708), (35.70349, 128.45437), (35.70432, 128.45234), (35.70690, 128.45189)]],
+        "extra": [
+            {"id": 9110000001, "n": "", "k": "university", "lv": 4, "h": 16.0, "p": [[-148, -647], [-68, -647], [-68, -601], [-148, -601]]},
+            {"id": 9110000002, "n": "", "k": "university", "lv": 7, "h": 27.0, "p": [[-2, -610], [60, -610], [60, -572], [-2, -572]]},
+            {"id": 9110000003, "n": "", "k": "university", "lv": 3, "h": 12.0, "p": [[18, -750], [76, -750], [76, -684], [18, -684]]},
+            {"id": 9110000004, "n": "", "k": "university", "lv": 4, "h": 16.0, "p": [[-222, -890], [-189, -890], [-189, -865], [-222, -865]]},
+        ],
+    },
+    "kw": {  # 광운대학교 (월계동): the campus is mapped as four separate ways
+        "origin": (37.61928, 127.05822), "bbox": (37.6150, 127.0510, 37.6250, 127.0650),
+        "outline": [("way", 804478563), ("way", 804478565), ("way", 804478564), ("way", 804483798)],
+        "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22},
+    },
+    "mju": {  # 명지대학교 인문캠퍼스 (남가좌동)
+        "origin": (37.58010, 126.92498), "bbox": (37.5745, 126.9170, 37.5855, 126.9300),
+        "outline": ("way", 462886441),
+        "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22},
+    },
+    "smu": {  # 상명대학교 서울캠퍼스 (홍지동): a steep campus under 북악산
+        "origin": (37.60141, 126.95504), "bbox": (37.5970, 126.9490, 37.6085, 126.9620),
+        "outline": ("way", 221502708),
+        "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22},
+    },
+    "cuk": {  # 가톨릭대학교 성심교정 (부천 역곡)
+        "origin": (37.48599, 126.80456), "bbox": (37.4810, 126.7940, 37.4925, 126.8095),
+        "outline": ("way", 621412078),
+        "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22},
+    },
+    "gachon": {  # 가천대학교 글로벌캠퍼스 (성남): 정문 plaza by 가천대역, the 비전타워 steps behind it
+        # no infill: the empty ground around is forest, and 태평동's houses are already mapped (thousands: the bbox stops short of them)
+        "origin": (37.45042, 127.12737), "bbox": (37.4478, 127.1225, 37.4590, 127.1385),
+        "outline": ("way", 563534493),
+        "extra": [],
+    },
 }
 
 CAMPUS_ID, OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
@@ -425,6 +468,20 @@ def inner_rings(e):
     return [ring(g) for g in stitch([m["geometry"] for m in e.get("members", []) if m.get("role") == "inner" and m.get("geometry")])]
 
 
+def outline_rings():
+    """Campus boundary: one OSM element, a list of them, or [(lat, lon), ...] rings traced by hand."""
+    o = CFG["outline"]
+    if o and isinstance(o[0], str):
+        o = [o]
+    rings = []
+    for x in o:
+        if isinstance(x[0], str):
+            rings += [r for e in osm if (e["type"], e["id"]) == tuple(x) for r in outer_rings(e)]
+        else:
+            rings.append([[round(v, 1) for v in proj(la, lo)] for la, lo in x])
+    return rings
+
+
 def hash01(s):
     return int(hashlib.md5(s.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
 
@@ -588,7 +645,7 @@ def add_infill(cfg):
     s, w, n, e = BBOX
     regions = [[list(proj(la, lo)) for la, lo in r] for r in cfg.get("regions", [cfg.get("region", [(s, w), (s, e), (n, e), (n, w)])])]
     region = [p for r in regions for p in r]  # bounding points of all regions
-    outline = [r for e in osm if (e["type"], e["id"]) == CFG["outline"] for r in outer_rings(e)]
+    outline = outline_rings()
     # optional: "avoid" adds area kinds (e.g. park grass); "tallGap" keeps houses that far from 8+ storey blocks,
     # so apartment-complex courtyards stay open
     blocked = [a["p"] for a in areas if a["k"] in ("wood", "water", "pitch", "track", "parking", *cfg.get("avoid", []))] + outline
@@ -778,10 +835,7 @@ for b in buildings:
 
 terrain_b64 = base64.b64encode(array.array("h", [max(-32768, min(32767, int(round(v * 10)))) for v in H]).tobytes()).decode()
 
-campus = []
-for e in osm:
-    if (e["type"], e["id"]) == CFG["outline"]:
-        campus = outer_rings(e)
+campus = outline_rings()
 
 # sort areas: large first so small (pitch, parking) draw on top
 areas.sort(key=lambda a: -abs(area(a["p"])))

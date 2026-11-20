@@ -1,16 +1,17 @@
 // Building models. Campus landmarks are modelled by hand from photo references
 // (shape, storeys, colonnades, towers, roofs, materials); everything else gets a
 // style from its OSM type (Korean apartment blocks, houses, schools, shops...).
-import { WIN } from './facade.js?v=94';
-import { obb, area, makeRng, pip } from './buildings.js?v=94';
-import { cauLandmarks } from './models-cau.js?v=94';
-import { skkuLandmarks } from './models-skku.js?v=94';
-import { koreaCampus } from './models-korea.js?v=94';
-import { yonseiCampus } from './models-yonsei.js?v=94';
-import { snuCampus } from './models-snu.js?v=94';
-import { seoulCampuses } from './models-seoul.js?v=94';
-import { kssdCampuses } from './models-kssd.js?v=94';
-import { branchCampuses } from './models-branch.js?v=94';
+import { WIN } from './facade.js?v=95';
+import { obb, area, makeRng, pip } from './buildings.js?v=95';
+import { cauLandmarks } from './models-cau.js?v=95';
+import { skkuLandmarks } from './models-skku.js?v=95';
+import { koreaCampus } from './models-korea.js?v=95';
+import { yonseiCampus } from './models-yonsei.js?v=95';
+import { snuCampus } from './models-snu.js?v=95';
+import { seoulCampuses } from './models-seoul.js?v=95';
+import { kssdCampuses } from './models-kssd.js?v=95';
+import { branchCampuses } from './models-branch.js?v=95';
+import { sciCampuses } from './models-sci.js?v=95';
 
 // ------------------------------------------------------------ geometry helpers
 const circle = (cx, cz, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + Math.cos(i / n * Math.PI * 2) * r, cz + Math.sin(i / n * Math.PI * 2) * r]);
@@ -327,7 +328,7 @@ const HELPERS = { WIN, obb, area, circle, frame, rectL, centroid, clipHalf, faci
 Object.assign(LANDMARKS, cauLandmarks(HELPERS), skkuLandmarks(HELPERS));
 // campuses with their own look for buildings that have no hand-made model
 const FALLBACKS = {};
-for (const [id, make] of Object.entries({ korea: koreaCampus, yonsei: yonseiCampus, snu: snuCampus, ...seoulCampuses, ...kssdCampuses, ...branchCampuses })) {
+for (const [id, make] of Object.entries({ korea: koreaCampus, yonsei: yonseiCampus, snu: snuCampus, ...seoulCampuses, ...kssdCampuses, ...branchCampuses, ...sciCampuses })) {
   const c = make(HELPERS);
   Object.assign(LANDMARKS, c.landmarks);
   FALLBACKS[id] = c.fallback;

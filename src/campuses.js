@@ -177,6 +177,48 @@ export const CAMPUSES = {
     data: 'data/dankookc.json', pad: [12, -57], launchTarget: [144, -419],
     outerChunkScale: 2, liteOuter: true, treeClear: [[12, -57, 20]],
   },
+  kaist: {
+    short: '카이스트', full: '한국과학기술원', tag: 'KAIST', style: 'kaist',
+    hero: { id: 1215432908, name: '학술문화관', view: [0.24, 0.97] },
+    data: 'data/kaist.json', pad: [-8, 4], launchTarget: [-99, -397],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[-8, 4, 20]],
+  },
+  dgist: {
+    short: '디지스트', full: '대구경북과학기술원', tag: 'DGIST', style: 'dgist',
+    hero: { id: 1570040591, name: '학술정보관', view: [0.34, 0.94] },
+    data: 'data/dgist.json', pad: [18, -302], launchTarget: [-242, -678],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[18, -302, 20]],
+  },
+  kw: {
+    short: '광운대', full: '광운대학교', tag: 'KWANGWOON UNIVERSITY', style: 'kw',
+    hero: { id: 168287589, name: '화도관', view: [-0.66, 0.75] },
+    data: 'data/kw.json', pad: [46, -8], launchTarget: [111, -127],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[46, -8, 20]],
+  },
+  mju: {
+    short: '명지대 인문캠', full: '명지대학교 인문캠퍼스', tag: 'MYONGJI UNIVERSITY', style: 'mju',
+    hero: { id: 462990139, name: '방목학술정보관', view: [0.54, 0.84] },
+    data: 'data/mju.json', pad: [-20, 10], launchTarget: [-211, 57],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-20, 10, 20]],
+  },
+  smu: {
+    short: '상명대 서울캠', full: '상명대학교 서울캠퍼스', tag: 'SANGMYUNG UNIVERSITY', style: 'smu',
+    hero: { id: 698228420, name: '미래백년관', view: [0, 1] },
+    data: 'data/smu.json', pad: [4, -2], launchTarget: [3, -168],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[4, -2, 20]],
+  },
+  cuk: {
+    short: '가톨릭대 성심캠', full: '가톨릭대학교 성심교정', tag: 'THE CATHOLIC UNIVERSITY OF KOREA', style: 'cuk',
+    hero: { id: 343596941, name: '김수환추기경국제관', view: [0.7, -0.71] },
+    data: 'data/cuk.json', pad: [-62, -56], launchTarget: [-210, -4],
+    outerChunkScale: 2, liteOuter: true, treeClear: [[-62, -56, 20]],
+  },
+  gachon: {
+    short: '가천대 글로벌캠', full: '가천대학교 글로벌캠퍼스', tag: 'GACHON UNIVERSITY', style: 'gachon',
+    hero: { id: 1041736196, name: '가천관', view: [-1, 0.03] },
+    data: 'data/gachon.json', pad: [-2, -2], launchTarget: [213, -6],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[-2, -2, 20]],
+  },
 };
 
 const KEY = 'univ-campus';
