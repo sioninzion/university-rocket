@@ -3,7 +3,7 @@
 // framed doors, stair towers, glass entrance halls, set-back top floors, skylights, flagpoles and roof plant.
 // An entry either dresses up a campus's existing hand-made model (keep: the earlier parts stay, the details are
 // added around them) or builds the whole building in one of the looks below.
-import { kit } from './models-seoul.js?v=97';
+import { kit } from './models-seoul.js?v=98';
 
 function pip(p, x, z) {
   let c = false;
@@ -240,6 +240,11 @@ const T = {
   1041736196: { keep: 1, face: [-1, 0.03], entry: 'canopy', depth: 9, entW: 18, steps: 4, doors: 5, flags: 3 },      // 가천관
   1041736203: { keep: 1, entry: 'glass', steps: 3, sky: 1 },                                                         // 전자정보도서관
   1041755558: { keep: 1, entry: 'canopy', towers: [0.2, 0.8], units: 3 },                                           // 중앙도서관
+  // 한성대
+  471425077: { keep: 1, face: [0.6, 0.8], entry: 'canopy', depth: 7, entW: 16, steps: 4, doors: 4, flags: 3, units: 0 }, // 상상관
+  416291970: { keep: 1, entry: 'glass', steps: 3, doors: 3, units: 3 },                                              // 미래관
+  471690519: { keep: 1, entry: 'portico', entW: 16, colH: 12, steps: 5, doors: 3, units: 3 },                         // 낙산관
+  416291974: { keep: 1, entry: 'canopy', steps: 3, towers: [0.15, 0.85], crown: 0.7, units: 3 },                     // 연구관
 };
 
 // id -> (b, rnd, prev) => specs, where prev is the earlier model's parts (or null)

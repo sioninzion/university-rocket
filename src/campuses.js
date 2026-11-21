@@ -219,6 +219,12 @@ export const CAMPUSES = {
     data: 'data/gachon.json', pad: [-2, -2], launchTarget: [213, -6],
     outerChunkScale: 2.2, liteOuter: true, treeClear: [[-2, -2, 20]],
   },
+  hsu: {
+    short: '한성대', full: '한성대학교', tag: 'HANSUNG UNIVERSITY', style: 'hsu',
+    hero: { id: 471425077, name: '상상관', view: [0.6, 0.8] },
+    data: 'data/hsu.json', pad: [25, -10], launchTarget: [-117, 4],
+    outerChunkScale: 2.2, liteOuter: true, treeClear: [[25, -10, 20]],
+  },
 };
 
 const KEY = 'univ-campus';

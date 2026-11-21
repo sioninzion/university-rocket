@@ -242,6 +242,11 @@ CAMPUSES = {
         "outline": ("way", 563534493),
         "extra": [],
     },
+    "hsu": {  # 한성대학교 (삼선동): a hillside campus under 낙산, the 정문 where the bus from 한성대입구역 turns
+        "origin": (37.58230, 127.01115), "bbox": (37.5765, 127.0035, 37.5885, 127.0175),
+        "outline": ("way", 223434839),
+        "extra": [], "infill": {"step": 24.0, "avoid": ["grass", "farm"], "tallGap": 22},
+    },
 }
 
 CAMPUS_ID, OSM, DEM_DIR, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]

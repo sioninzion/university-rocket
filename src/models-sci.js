@@ -1,6 +1,6 @@
 // 카이스트·디지스트와 '광명상가가'(광운대·명지대 인문캠·상명대 서울캠·가톨릭대 성심교정·가천대 글로벌캠):
 // landmarks keyed by OSM id, plus each campus's palette for the buildings without a hand-made model.
-import { kit } from './models-seoul.js?v=97';
+import { kit } from './models-seoul.js?v=98';
 
 export const sciCampuses = {
   // 한국과학기술원 (대전): pale concrete and glass research blocks around 오리연못
@@ -172,5 +172,32 @@ export const sciCampuses = {
       1041736203: k.block(7, office('#d9dad6', { win: WIN.RIBBON, cornice: { h: 0.8, d: 0.4 } })), // 전자정보도서관
       1041755558: k.block(7, glass('#7d9fb5', { cornice: { h: 0.8, d: 0.5 } })),                   // 중앙도서관
     }, fallback: k.fallback([() => office(WHITE), () => glass('#7fa1b6'), () => office('#c9c7c1', { win: WIN.RIBBON }), () => office('#d9cfbf')]) };
+  },
+
+  // 한성대학교 (삼선동): pale stone towers packed on the slope under 낙산, older red brick halls on the upper terrace
+  hsu(h) {
+    const k = kit(h), { WIN, office, brick, glass, tall } = k, PALE = '#d9d7d0';
+    return { landmarks: {
+      // 상상관: fifteen storeys of pale stone with tight vertical fins over a two-storey glass base, a frame crowning the roof
+      471425077(b) {
+        const base = glass('#6f93ad', { floorH: 4.2, groundH: 5, cornice: { h: 0.9, d: 0.8 }, parapet: 0 }), H0 = tall(2, base);
+        const st = office('#cfccc4', { bay: 2.2, floorH: 3.6, groundH: 3.6, pilaster: { every: 1, w: 0.4, d: 0.55, from: 0 }, cornice: { h: 1, d: 0.5 }, plinth: null });
+        const H = H0 + 13 * 3.6, o = h.obb(b.p), L = h.frame(o);
+        return [{ poly: b.p, h: H0, style: base },
+          { poly: k.inset(b.p, 0.96), minY: H0, h: H - H0, style: st },
+          { poly: h.rectL(L, -o.hl * 0.7, o.hl * 0.7, -o.hw * 0.55, o.hw * 0.55), minY: H, h: 5, style: office('#bfc3c6', { win: WIN.NONE, parapet: 1.6, plinth: null }) }];
+      },
+      // 미래관: white six-storey block with long window bands, its top floor set back
+      416291970(b) {
+        const st = office('#e6e5e0', { win: WIN.RIBBON, floorH: 3.8, groundH: 4.6, cornice: { h: 0.7, d: 0.5 } }), H = tall(5, st);
+        return [{ poly: b.p, h: H, style: st }, { poly: k.inset(b.p, 0.8), minY: H, h: 3.8, style: glass('#7896ab', { plinth: null }) }];
+      },
+      // 낙산관: broad four-storey hall in warm stone by the gate
+      471690519: k.block(4, office('#d6cdbb', { floorH: 4.2, groundH: 5, cornice: { h: 1, d: 0.6 }, pilaster: { every: 2, w: 0.8, d: 0.35, from: 1.2 } })),
+      // 연구관: thirteen-storey research tower in a white grid
+      416291974: k.block(13, office('#e2e1dc', { bay: 3, floorH: 3.6, groundH: 4.6, cornice: { h: 0.9, d: 0.5 } })),
+      416291971: k.block(5, brick('#9c5643')),                                                     // 진리관
+      416291972: k.block(5, brick('#a35d48')),                                                     // 우촌관
+    }, fallback: k.fallback([() => office(PALE), () => brick('#9c5643'), () => office('#c7c5be', { win: WIN.RIBBON }), () => glass('#7c9db2')]) };
   },
 };
